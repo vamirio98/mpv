@@ -4,6 +4,8 @@
 -- Save this file in your mpv scripts dir. Log will be saved as
 -- $HOME/.cache/mpv/history.txt
 
+local msg = require("mp.msg")
+
 local historyFilePath = (os.getenv("userprofile") or os.getenv("HOME"))
 	.. "/.cache/mpv/history.txt"
 
@@ -30,8 +32,7 @@ mp.register_event("file-loaded", function()
 	historyStr = historyStr .. string.format("%s\n", mp.get_property("path"))
 end)
 
-mp.register_event("end-file", function()
-end)
+mp.register_event("end-file", function() end)
 
 mp.register_event("shutdown", function()
 	historyFile:write(historyStr)
