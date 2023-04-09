@@ -1,0 +1,2 @@
+# mpv
+Personal mpv config.
