@@ -25,7 +25,7 @@ end
 -- Create the file if not existed, note that the parent folder has to exist.
 local file = io.open(historyFilePath, "a+")
 if not file then
-	msg("Can't open file " .. historyFilePath .. " to read", 3)
+	msg.error("Can't open file " .. historyFilePath .. " to read", 3)
 	return
 end
 -- Read all history.
@@ -77,7 +77,7 @@ end)
 mp.register_event("shutdown", function()
 	file = io.open(historyFilePath, "w")
 	if not file then
-		msg("Can't open " .. historyFilePath .. " to write.", 3)
+		msg.error("Can't open " .. historyFilePath .. " to write.", 3)
 		return
 	end
 
@@ -87,3 +87,17 @@ mp.register_event("shutdown", function()
 
 	file:close()
 end)
+
+function ShowHistory(duration)
+	if not duration then
+		duration = 3
+	end
+
+	local filename = "None"
+	if #history > 0 then
+		filename = history[1].title
+	end
+	mp.osd_message("Last played: " .. filename, duration)
+end
+
+mp.add_key_binding("h", ShowHistory)
