@@ -4,37 +4,86 @@
 -- Save this file in your mpv scripts dir. Log will be saved as
 -- $HOME/.cache/mpv/history.txt
 
-local msg = require("mp.msg")
+local msg = require("mp.msg") -- Show information and debug.
 
+local history = {} -- Use to record history, 1 -> end <=> newest -> oldest.
 local historyFilePath = (os.getenv("userprofile") or os.getenv("HOME"))
 	.. "/.cache/mpv/history.txt"
+local cap = 30 -- The capacity of the history.
 
-local historyStr -- The history string.
+-- Wrap the last N elements in the table T with length L(only the array part).
+local function wrap(t, n, l)
+	if not l then
+		l = #t
+	end
 
-local function openHistory(filePath)
-	-- Read the existed record.
-	local file = io.open(filePath, "a+") --[[ Create the file if not existed,
-	                                          note that the parent folder has to
-											  exist. ]]
-
-	historyStr = file:read("a")
-	file:close()
-
-	-- Open file to write.
-	file = io.open(filePath, "w")
-	return file
+	for _ = 1, n do
+		table.insert(t, 1, table.remove(t, l))
+	end
 end
 
-local historyFile = openHistory(historyFilePath)
+-- Create the file if not existed, note that the parent folder has to exist.
+local file = io.open(historyFilePath, "a+")
+if not file then
+	msg("Can't open file " .. historyFilePath .. " to read", 3)
+	return
+end
+-- Read all history.
+local getLine = file:lines("l")
+while getLine() do
+	local line = getLine()
+	history[#history + 1] =
+		{ time = string.sub(line, 2, 20), title = string.sub(line, 23) }
+	line = getLine()
+	history[#history].path = line
+end
+file:close()
 
 mp.register_event("file-loaded", function()
-	historyStr = historyStr .. string.format("<%s> ", os.date("%Y/%m/%d %X"))
-	historyStr = historyStr .. string.format("%s\n", mp.get_property("path"))
+	local inHistory = false
+	local playTime = os.date("%Y/%m/%d %X")
+	local videoTitle = mp.get_property("filename")
+	local videoPath = mp.get_property("path")
+
+	for i, v in ipairs(history) do
+		-- This video has been play before, update the play time.
+		if v.path == videoPath then
+			inHistory = true
+			v.time = playTime
+			wrap(history, 1, i) -- Update order.
+			break
+		end
+	end
+
+	-- Add a new record.
+	if not inHistory then
+		-- Ensure the items no more than the capacity.
+		local offset = 0
+		if #history < cap then
+			offset = 1
+		end
+
+		history[#history + offset] = {
+			time = playTime,
+			title = videoTitle,
+			path = videoPath,
+		}
+		wrap(history, 1)
+	end
 end)
 
-mp.register_event("end-file", function() end)
+--mp.register_event("end-file", function() end)
 
 mp.register_event("shutdown", function()
-	historyFile:write(historyStr)
-	historyFile:close()
+	file = io.open(historyFilePath, "w")
+	if not file then
+		msg("Can't open " .. historyFilePath .. " to write.", 3)
+		return
+	end
+
+	for _, v in ipairs(history) do
+		file:write(string.format("\n<%s> %s\n%s\n", v.time, v.title, v.path))
+	end
+
+	file:close()
 end)
