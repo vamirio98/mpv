@@ -1,13 +1,22 @@
 -- Record play history.
 
--- How to use.
--- Save this file in your mpv scripts dir. Log will be saved as
--- $HOME/.cache/mpv/history.txt
+-- NOTE:
+-- 1. Log will be saved as $HOME/.cache/mpv/history.txt.
+-- 2. If the two mpv instance are open at once, only the history from the later
+--    closed one will be saved.
 
+local mp = require("mp")
 local msg = require("mp.msg") -- Show information and debug.
 
+package.path = package.path
+	.. ";"
+	.. mp.command_native({ "expand-path", "~~/scripts" })
+	.. "/?.lua"
+
+local kb = require("kb")
+
 local history = {} -- Use to record history, 1 -> end <=> newest -> oldest.
-local historyFilePath = (os.getenv("userprofile") or os.getenv("HOME"))
+local historyFilePath = mp.command_native({ "expand-path", "~/" })
 	.. "/.cache/mpv/history.txt"
 local cap = 30 -- The capacity of the history.
 
@@ -100,4 +109,4 @@ function ShowHistory(duration)
 	mp.osd_message("Last played: " .. filename, duration)
 end
 
-mp.add_key_binding("h", ShowHistory)
+kb.bindKeys("h", "show_history", ShowHistory)
