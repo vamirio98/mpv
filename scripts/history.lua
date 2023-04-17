@@ -103,13 +103,13 @@ function ShowHistory(duration)
 		duration = 3
 	end
 
-	local historyList = {}
+	local list = {}
 	for _, f in ipairs(history) do
-		table.insert(historyList, f.title)
+		table.insert(list, f.title)
 	end
-	local cursor = osdPlaylist.newCursorStatus()
-	cursor.pos = 1
-	osdPlaylist.draw(historyList, cursor)
+	local osdList = osdPlaylist.new()
+	osdList.cursor = 1
+	osdPlaylist.draw(osdList, list)
 end
 
 kb.bindKeys("h", "show_history", ShowHistory)

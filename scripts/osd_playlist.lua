@@ -3,7 +3,7 @@
 local osd_playlist = {}
 
 -- Default settings.
-local DEFAULT_SETTIINGS = {
+local SETTINGS = {
 	-- To bind multiple keys separate them by a space.
 	key = {
 		actionUp = "UP k",
@@ -44,14 +44,20 @@ local DEFAULT_SETTIINGS = {
 		playingSelected = "{\\c&FFFFFF&}▶ %item",
 		hoveringPlayingSelceted = "{\\c&C1C1FF}➔ %item",
 	},
+
+	-- When it is TRUE, all bindings will restore after closing the playlist.
+	dynamicBinding = true,
 }
 
-local DEFAULT_CURSOR_STATUS = {
+-- A playlist object.
+local OBJ = {
+	settings = SETTINGS,
 	selection = {}, -- Selected items, a list of the index. This is a SET.
-	pos = 0, -- Cursor's position, 1-based.
+	cursor = 0, -- Cursor's position, 1-based.
 	playing = 0, -- Index of the item being play, 1-based
 }
 
+-- Set operations.
 function osd_playlist.addToSet(set, key)
 	set[key] = true
 end
@@ -69,42 +75,34 @@ local mp = require("mp")
 local msg = require("mp.msg")
 local utils = require("mp.utils")
 
--- Get new settings.
-function osd_playlist.newSettings()
-	return DEFAULT_SETTIINGS
-end
-
--- Get new cursor status object.
-function osd_playlist.newCursorStatus()
-	return DEFAULT_CURSOR_STATUS
+-- Get new OSD playlist object.
+function osd_playlist.new()
+	return OBJ
 end
 
 -- Select a template according to the list index.
--- @cursor: CursorStatus object
+-- @obj: OSD playlist object
 -- @index: list index of the current item
--- @settings: provide the templates
-local function selectTemplate(cursor, index, settings)
-	if not settings then
-		settings = DEFAULT_SETTIINGS
-	end
+local function selectTemplate(obj, index)
+	local template = obj.settings.wrapper.normal
 
-	local template = settings.wrapper.normal
-
-	if osd_playlist.setContains(cursor.selection, index) then
-		if index == cursor.playing then
-			template = index == cursor.pos
-					and settings.wrapper.hoveringPlayingSelceted
-				or settings.wrapper.playingSelected
+	if osd_playlist.setContains(obj.selection, index) then
+		if index == obj.playing then
+			template = index == obj.cursor
+					and obj.settings.wrapper.hoveringPlayingSelceted
+				or obj.settings.wrapper.playingSelected
 		else
-			template = index == cursor.pos and settings.wrapper.hoveringSelected
-				or settings.wrapper.selected
+			template = index == obj.cursor
+					and obj.settings.wrapper.hoveringSelected
+				or obj.settings.wrapper.selected
 		end
 	else
-		if index == cursor.playing then
-			template = index == cursor.pos and settings.wrapper.playingHovering
-				or settings.wrapper.playing
-		elseif index == cursor.pos then
-			template = settings.wrapper.hovering
+		if index == obj.playing then
+			template = index == obj.cursor
+					and obj.settings.wrapper.playingHovering
+				or obj.settings.wrapper.playing
+		elseif index == obj.cursor then
+			template = obj.settings.wrapper.hovering
 		end
 	end
 
@@ -116,14 +114,11 @@ local function warpItem(template, item)
 end
 
 -- Draw the list.
+-- @obj: OSD playlist object
 -- @list: list [array]
 -- @cursor: CursorStatus object
 -- @settings: list settings
-function osd_playlist.draw(list, cursor, settings)
-	if not settings then
-		settings = DEFAULT_SETTIINGS
-	end
-
+function osd_playlist.draw(obj, list)
 	local ass = assdraw.ass_new()
 
 	local listLen = #list
@@ -131,31 +126,31 @@ function osd_playlist.draw(list, cursor, settings)
 	local h = 360
 	local w = aspectRatio * h
 
-	ass:append(settings.styleAssTag)
+	ass:append(obj.settings.styleAssTag)
 
 	-- (visible index, list index) pairs of list entries that should be rendered.
 	local visibleIndices = {}
 
-	table.insert(visibleIndices, cursor.pos)
+	table.insert(visibleIndices, obj.cursor)
 
 	local offset = 1
 	local visibleIndicesLen = 1
 	while
-		visibleIndicesLen < settings.showAmount
+		visibleIndicesLen < obj.settings.showAmount
 		and visibleIndicesLen < listLen
 	do
 		-- Add entry for offset steps below the cursor.
-		local below = cursor.pos + offset
+		local below = obj.cursor + offset
 		if below <= listLen then
 			table.insert(visibleIndices, below)
 			visibleIndicesLen = visibleIndicesLen + 1
 		end
 
 		-- Add entry for offset steps above the cursor.
-		local above = cursor.pos - offset
+		local above = obj.cursor - offset
 		if
 			above >= 1
-			and visibleIndicesLen < settings.showAmount
+			and visibleIndicesLen < obj.settings.showAmount
 			and visibleIndicesLen < listLen
 		then
 			table.insert(visibleIndices, 1, above)
@@ -167,20 +162,22 @@ function osd_playlist.draw(list, cursor, settings)
 
 	for displayIndex, listIndex in ipairs(visibleIndices) do
 		if displayIndex == 1 and listIndex ~= 1 then
-			ass:append(settings.listSlicedPrefix .. "\\N")
-		elseif displayIndex == settings.showAmount and listIndex ~= listLen then
-			ass:append(settings.listSlicedSuffix)
+			ass:append(obj.settings.listSlicedPrefix .. "\\N")
+		elseif
+			displayIndex == obj.settings.showAmount and listIndex ~= listLen
+		then
+			ass:append(obj.settings.listSlicedSuffix)
 		else
 			ass:append(
 				warpItem(
-					selectTemplate(cursor, listIndex, settings),
-					listIndex .. " " .. list[listIndex] .. "\\N"
+					selectTemplate(obj, listIndex),
+					listIndex .. "   " .. list[listIndex] .. "\\N"
 				)
 			)
 		end
 	end
 
-	if settings.scaleByWindow then
+	if obj.settings.scaleByWindow then
 		w, h = 0, 0
 	end
 	mp.set_osd_ass(w, h, ass.text)
