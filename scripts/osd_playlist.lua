@@ -1,6 +1,6 @@
--- OSD List module.
+-- OSD playlist module.
 
-local osd_list = {}
+local osd_playlist = {}
 
 -- Default settings.
 local DEFAULT_SETTIINGS = {
@@ -35,11 +35,34 @@ local DEFAULT_SETTIINGS = {
 	-- List entry wrapper templates, used by mp.assdraw
 	-- %item = list item
 	wrapper = {
-		normalItem = "{\\c&HFFFFF&}□ %item",
-		hoveredItem = "{\\c&H33FFF&}➔ %item",
-		selectedItem = "{\\c&HAAAAA&}■ %item",
+		normal = "{\\c&FFFFFF&}□ %item",
+		hovering = "{\\c&33FFFF&}➔ %item",
+		selected = "{\\c&FFFFFF&}■ %item",
+		playing = "{\\c&FFFFFF&}▷ %item",
+		hoveringSelected = "{\\c&FFFFFF&}➔ %item",
+		playingHovering = "{\\c&33FFFF&}▷ %item",
+		playingSelected = "{\\c&FFFFFF&}▶ %item",
+		hoveringPlayingSelceted = "{\\c&C1C1FF}➔ %item",
 	},
 }
+
+local DEFAULT_CURSOR_STATUS = {
+	selection = {}, -- Selected items, a list of the index. This is a SET.
+	pos = 0, -- Cursor's position, 1-based.
+	playing = 0, -- Index of the item being play, 1-based
+}
+
+function osd_playlist.addToSet(set, key)
+	set[key] = true
+end
+
+function osd_playlist.removeFromSet(set, key)
+	set[key] = nil
+end
+
+function osd_playlist.setContains(set, key)
+	return set[key] ~= nil
+end
 
 local assdraw = require("mp.assdraw")
 local mp = require("mp")
@@ -47,8 +70,45 @@ local msg = require("mp.msg")
 local utils = require("mp.utils")
 
 -- Get new settings.
-function osd_list.newSettings()
+function osd_playlist.newSettings()
 	return DEFAULT_SETTIINGS
+end
+
+-- Get new cursor status object.
+function osd_playlist.newCursorStatus()
+	return DEFAULT_CURSOR_STATUS
+end
+
+-- Select a template according to the list index.
+-- @cursor: CursorStatus object
+-- @index: list index of the current item
+-- @settings: provide the templates
+local function selectTemplate(cursor, index, settings)
+	if not settings then
+		settings = DEFAULT_SETTIINGS
+	end
+
+	local template = settings.wrapper.normal
+
+	if osd_playlist.setContains(cursor.selection, index) then
+		if index == cursor.playing then
+			template = index == cursor.pos
+					and settings.wrapper.hoveringPlayingSelceted
+				or settings.wrapper.playingSelected
+		else
+			template = index == cursor.pos and settings.wrapper.hoveringSelected
+				or settings.wrapper.selected
+		end
+	else
+		if index == cursor.playing then
+			template = index == cursor.pos and settings.wrapper.playingHovering
+				or settings.wrapper.playing
+		elseif index == cursor.pos then
+			template = settings.wrapper.hovering
+		end
+	end
+
+	return template
 end
 
 local function warpItem(template, item)
@@ -57,9 +117,9 @@ end
 
 -- Draw the list.
 -- @list: list [array]
--- @cursor: 1-based cursor index of the list
+-- @cursor: CursorStatus object
 -- @settings: list settings
-function osd_list.draw(list, cursor, settings)
+function osd_playlist.draw(list, cursor, settings)
 	if not settings then
 		settings = DEFAULT_SETTIINGS
 	end
@@ -76,7 +136,7 @@ function osd_list.draw(list, cursor, settings)
 	-- (visible index, list index) pairs of list entries that should be rendered.
 	local visibleIndices = {}
 
-	table.insert(visibleIndices, cursor)
+	table.insert(visibleIndices, cursor.pos)
 
 	local offset = 1
 	local visibleIndicesLen = 1
@@ -85,14 +145,14 @@ function osd_list.draw(list, cursor, settings)
 		and visibleIndicesLen < listLen
 	do
 		-- Add entry for offset steps below the cursor.
-		local below = cursor + offset
+		local below = cursor.pos + offset
 		if below <= listLen then
 			table.insert(visibleIndices, below)
 			visibleIndicesLen = visibleIndicesLen + 1
 		end
 
 		-- Add entry for offset steps above the cursor.
-		local above = cursor - offset
+		local above = cursor.pos - offset
 		if
 			above >= 1
 			and visibleIndicesLen < settings.showAmount
@@ -113,8 +173,8 @@ function osd_list.draw(list, cursor, settings)
 		else
 			ass:append(
 				warpItem(
-					settings.wrapper.normalItem,
-					displayIndex .. " " .. list[listIndex] .. "\\N"
+					selectTemplate(cursor, listIndex, settings),
+					listIndex .. " " .. list[listIndex] .. "\\N"
 				)
 			)
 		end
@@ -126,4 +186,4 @@ function osd_list.draw(list, cursor, settings)
 	mp.set_osd_ass(w, h, ass.text)
 end
 
-return osd_list
+return osd_playlist

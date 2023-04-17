@@ -14,7 +14,7 @@ package.path = package.path
 	.. "/?.lua"
 
 local kb = require("kb")
-local osdList = require("osd_list")
+local osdPlaylist = require("osd_playlist")
 
 local history = {} -- Use to record history, 1 -> end <=> newest -> oldest.
 local historyFilePath = mp.command_native({ "expand-path", "~/" })
@@ -107,7 +107,9 @@ function ShowHistory(duration)
 	for _, f in ipairs(history) do
 		table.insert(historyList, f.title)
 	end
-	osdList.draw(historyList, 1)
+	local cursor = osdPlaylist.newCursorStatus()
+	cursor.pos = 1
+	osdPlaylist.draw(historyList, cursor)
 end
 
 kb.bindKeys("h", "show_history", ShowHistory)
