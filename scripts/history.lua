@@ -340,7 +340,6 @@ end
 
 local function onFileLoaded()
 	updateHistory()
-	updateList()
 
 	if visible then -- Update the OSD list.
 		show()
