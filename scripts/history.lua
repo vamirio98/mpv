@@ -195,6 +195,23 @@ local function onUnselectItem()
 	showFunc()
 end
 
+local function onRemoveItem()
+	table.remove(history, osdObj.cursor)
+
+	-- Update selection.
+	if osdPlaylist.setContains(osdObj.selection, osdObj.cursor) then
+		osdPlaylist.removeFromSet(osdObj.selection, osdObj.cursor)
+	end
+	for k, _ in pairs(osdObj.selection) do
+		if k > osdObj.cursor then
+			osdPlaylist.removeFromSet(osdObj.selection, k)
+			osdPlaylist.addToSet(osdObj.selection, k - 1)
+		end
+	end
+
+	showFunc()
+end
+
 local function addKeyBinds()
 	kb.bindKeysForced(
 		osdObj.settings.key.moveUp,
@@ -244,6 +261,12 @@ local function addKeyBinds()
 		onUnselectItem,
 		"repeatable"
 	)
+	kb.bindKeysForced(
+		osdObj.settings.key.removeItem,
+		"remove-item",
+		onRemoveItem,
+		"repeatable"
+	)
 end
 
 local function removeKeyBinds()
@@ -256,6 +279,7 @@ local function removeKeyBinds()
 		kb.unbindKeys(osdObj.settings.key.moveEnd, "move-end")
 		kb.unbindKeys(osdObj.settings.key.selectItem, "select-item")
 		kb.unbindKeys(osdObj.settings.key.unselectItem, "unselect-item")
+		kb.unbindKeys(osdObj.settings.key.removeItem, "remove-item")
 	end
 end
 
@@ -295,6 +319,7 @@ local function main()
 	showFunc = show
 
 	osdObj.cursor = 1
+	osdObj.playing = 1
 	osdObj.keyBindsTimer = mp.add_periodic_timer(displayTimeout, hide)
 
 	readHistory()
