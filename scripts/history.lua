@@ -203,12 +203,15 @@ local function onRemoveItem()
 	if osdPlaylist.setContains(osdObj.selection, osdObj.cursor) then
 		osdPlaylist.removeFromSet(osdObj.selection, osdObj.cursor)
 	end
+	local tmp = {}
 	for k, _ in pairs(osdObj.selection) do
 		if k > osdObj.cursor then
-			osdPlaylist.removeFromSet(osdObj.selection, k)
-			osdPlaylist.addToSet(osdObj.selection, k - 1)
+			osdPlaylist.addToSet(tmp, k - 1)
+		else
+			osdPlaylist.addToSet(tmp, k)
 		end
 	end
+	osdObj.selection = tmp
 
 	showFunc()
 end
