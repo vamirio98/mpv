@@ -36,14 +36,14 @@ local SETTINGS = {
 	-- List entry wrapper templates, used by mp.assdraw
 	-- %item = list item
 	wrapper = {
-		normal = "{\\c&FFFFFF&}□ %item",
-		hovering = "{\\c&33FFFF&}➔ %item",
-		selected = "{\\c&FFFFFF&}■ %item",
+		normal = "{\\c&FFFFFF&}⚪  %item",
+		hovering = "{\\c&33FFFF&}➔  %item",
+		selected = "{\\c&FFFFFF&}⚫  %item",
 		playing = "{\\c&FFFFFF&}▷ %item",
-		hoveringSelected = "{\\c&FFFFFF&}➔ %item",
-		playingHovering = "{\\c&33FFFF&}▷ %item",
-		playingSelected = "{\\c&FFFFFF&}▶ %item",
-		hoveringPlayingSelceted = "{\\c&C1C1FF}➔ %item",
+		hoveringSelected = "{\\c&FFFFFF&}➔  %item",
+		playingHovering = "{\\c&33FFFF&}▷  %item",
+		playingSelected = "{\\c&FFFFFF&}▶  %item",
+		hoveringPlayingSelceted = "{\\c&C1C1FF}➔  %item",
 	},
 
 	-- When it is TRUE, all bindings will restore after closing the playlist.
@@ -170,7 +170,7 @@ function osd_playlist.show(obj, list)
 			ass:append(
 				warpItem(
 					selectTemplate(obj, listIndex),
-					listIndex .. " " .. list[listIndex] .. "\\N"
+					listIndex .. "   " .. list[listIndex] .. "\\N"
 				)
 			)
 		end
