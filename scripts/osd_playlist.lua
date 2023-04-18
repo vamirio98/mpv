@@ -16,9 +16,9 @@ local SETTINGS = {
 		movePageDown = "PGDWN Ctrl+f",
 		moveBegin = "HOME Ctrl+a",
 		moveEnd = "END Ctrl+e",
-		selectItem = "RIGHT l",
-		unselectItem = "LEFT h",
-		removeItem = "BS Ctrl+d",
+		selectEntry = "RIGHT l",
+		unselectEntry = "LEFT h",
+		removeEntry = "BS Ctrl+d",
 		closePlaylist = "ESC",
 	},
 
@@ -37,16 +37,16 @@ local SETTINGS = {
 
 	-- List entry wrapper templates, used by mp.assdraw
 	-- \\c&...& = color, BGR format
-	-- %item = list item
+	-- %entry = list entry
 	wrapper = {
-		normal = "{\\c&FFFFFF&}◯  %item",
-		hovering = "{\\c&33FFFF&}➔  %item",
-		selected = "{\\c&FFFFFF&}➤  %item",
-		playing = "{\\c&FFFFFF&}▷  %item",
-		hoveringSelected = "{\\c&33FFFF&}➤  %item",
-		playingHovering = "{\\c&33FFFF&}▷  %item",
-		playingSelected = "{\\c&FFFFFF&}▶  %item",
-		hoveringPlayingSelceted = "{\\c&33FFFF}▶  %item",
+		normal = "{\\c&FFFFFF&}◯  %entry",
+		hovering = "{\\c&33FFFF&}➔  %entry",
+		selected = "{\\c&FFFFFF&}➤  %entry",
+		playing = "{\\c&FFFFFF&}▷  %entry",
+		hoveringSelected = "{\\c&33FFFF&}➤  %entry",
+		playingHovering = "{\\c&33FFFF&}▷  %entry",
+		playingSelected = "{\\c&FFFFFF&}▶  %entry",
+		hoveringPlayingSelceted = "{\\c&33FFFF}▶  %entry",
 	},
 
 	-- When it is TRUE, all bindings will restore after closing the playlist.
@@ -58,9 +58,9 @@ local SETTINGS = {
 -- A playlist object.
 local OBJ = {
 	settings = SETTINGS,
-	selection = {}, -- Selected items, a list of the index. This is a SET.
+	selection = {}, -- Selected entries, a list of the index. This is a SET.
 	cursor = 0, -- Cursor's position, 1-based.
-	playing = 0, -- Index of the item being play, 1-based
+	playing = 0, -- Index of the entry being play, 1-based
 }
 
 -- Set operations.
@@ -86,7 +86,7 @@ end
 
 -- Select a template according to the list index.
 -- @obj: OSD playlist object
--- @index: list index of the current item
+-- @index: list index of the current entry
 local function selectTemplate(obj, index)
 	local template = obj.settings.wrapper.normal
 
@@ -113,8 +113,8 @@ local function selectTemplate(obj, index)
 	return template
 end
 
-local function warpItem(template, item)
-	return template:gsub("%%item", item)
+local function warpEntry(template, entry)
+	return template:gsub("%%entry", entry)
 end
 
 -- Show the list.
@@ -171,7 +171,7 @@ function osd_playlist.show(obj, list)
 			ass:append(obj.settings.listSlicedSuffix)
 		else
 			ass:append(
-				warpItem(
+				warpEntry(
 					selectTemplate(obj, listIndex),
 					listIndex .. "   " .. list[listIndex] .. "\\N"
 				)

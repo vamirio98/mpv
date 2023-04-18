@@ -66,7 +66,7 @@ local function updateHistory()
 
 	-- Add a new record.
 	if not inHistory then
-		-- Ensure the items no more than the capacity.
+		-- Ensure the entries no more than the capacity.
 		local offset = 0
 		if #history < cap then
 			offset = 1
@@ -184,19 +184,19 @@ local function onMoveEnd()
 	showFunc()
 end
 
-local function onSelectItem()
+local function onSelectEntry()
 	osdPlaylist.addToSet(osdObj.selection, osdObj.cursor)
 
 	showFunc()
 end
 
-local function onUnselectItem()
+local function onUnselectEntry()
 	osdPlaylist.removeFromSet(osdObj.selection, osdObj.cursor)
 
 	showFunc()
 end
 
-local function onRemoveItem()
+local function onRemoveEntry()
 	table.remove(history, osdObj.cursor)
 
 	-- Update selection.
@@ -254,21 +254,21 @@ local function addKeyBinds()
 		"repeatable"
 	)
 	kb.bindKeysForced(
-		osdObj.settings.key.selectItem,
-		"select-item",
-		onSelectItem,
+		osdObj.settings.key.selectEntry,
+		"select-entry",
+		onSelectEntry,
 		"repeatable"
 	)
 	kb.bindKeysForced(
-		osdObj.settings.key.unselectItem,
-		"unselect-item",
-		onUnselectItem,
+		osdObj.settings.key.unselectEntry,
+		"unselect-entry",
+		onUnselectEntry,
 		"repeatable"
 	)
 	kb.bindKeysForced(
-		osdObj.settings.key.removeItem,
-		"remove-item",
-		onRemoveItem,
+		osdObj.settings.key.removeEntry,
+		"remove-entry",
+		onRemoveEntry,
 		"repeatable"
 	)
 	kb.bindKeysForced(
@@ -286,9 +286,9 @@ local function removeKeyBinds()
 		kb.unbindKeys(osdObj.settings.key.movePageDown, "move-page-down")
 		kb.unbindKeys(osdObj.settings.key.moveBegin, "move-begin")
 		kb.unbindKeys(osdObj.settings.key.moveEnd, "move-end")
-		kb.unbindKeys(osdObj.settings.key.selectItem, "select-item")
-		kb.unbindKeys(osdObj.settings.key.unselectItem, "unselect-item")
-		kb.unbindKeys(osdObj.settings.key.removeItem, "remove-item")
+		kb.unbindKeys(osdObj.settings.key.selectEntry, "select-entry")
+		kb.unbindKeys(osdObj.settings.key.unselectEntry, "unselect-entry")
+		kb.unbindKeys(osdObj.settings.key.removeEntry, "remove-entry")
 		kb.unbindKeys(osdObj.settings.key.closePlaylist, "close-playlist")
 	end
 end
