@@ -184,6 +184,12 @@ local function onMoveEnd()
 	showFunc()
 end
 
+local function onPlayEntry()
+	mp.commandv("loadfile", history[osdObj.cursor].path, "replace")
+
+	showFunc()
+end
+
 local function onSelectEntry()
 	osdPlaylist.addToSet(osdObj.selection, osdObj.cursor)
 
@@ -254,6 +260,12 @@ local function addKeyBinds()
 		"repeatable"
 	)
 	kb.bindKeysForced(
+		osdObj.settings.key.playEntry,
+		"play-entry",
+		onPlayEntry,
+		"repeatable"
+	)
+	kb.bindKeysForced(
 		osdObj.settings.key.selectEntry,
 		"select-entry",
 		onSelectEntry,
@@ -286,6 +298,7 @@ local function removeKeyBinds()
 		kb.unbindKeys(osdObj.settings.key.movePageDown, "move-page-down")
 		kb.unbindKeys(osdObj.settings.key.moveBegin, "move-begin")
 		kb.unbindKeys(osdObj.settings.key.moveEnd, "move-end")
+		kb.unbindKeys(osdObj.settings.key.playEntry, "play-entry")
 		kb.unbindKeys(osdObj.settings.key.selectEntry, "select-entry")
 		kb.unbindKeys(osdObj.settings.key.unselectEntry, "unselect-entry")
 		kb.unbindKeys(osdObj.settings.key.removeEntry, "remove-entry")
@@ -325,18 +338,25 @@ local function hide()
 	removeKeyBinds()
 end
 
+local function onFileLoaded()
+	updateHistory()
+	updateList()
+
+	if visible then -- Update the OSD list.
+		show()
+	end
+end
+
 local function main()
 	showFunc = show
 	hideFunc = hide
 
 	osdObj.cursor = 1
-	osdObj.playing = 1
 	osdObj.keyBindsTimer = mp.add_periodic_timer(displayTimeout, hide)
 
 	readHistory()
 
-	mp.register_event("file-loaded", updateHistory)
-	--mp.register_event("end-file", function() end)
+	mp.register_event("file-loaded", onFileLoaded)
 	mp.register_event("shutdown", recordHistory)
 
 	kb.bindKeys("h", "show-history", show)

@@ -16,6 +16,7 @@ local SETTINGS = {
 		movePageDown = "PGDWN Ctrl+f",
 		moveBegin = "HOME Ctrl+a",
 		moveEnd = "END Ctrl+e",
+		playEntry = "ENTER",
 		selectEntry = "RIGHT l",
 		unselectEntry = "LEFT h",
 		removeEntry = "BS Ctrl+d",
