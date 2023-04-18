@@ -16,6 +16,8 @@ local SETTINGS = {
 		movePageDown = "PGDWN Ctrl+f",
 		moveBegin = "HOME Ctrl+a",
 		moveEnd = "END Ctrl+e",
+		selectItem = "RIGHT l",
+		unselectItem = "LEFT h",
 		removeItem = "BS Ctrl+d",
 		closePlaylist = "ESC",
 	},
@@ -34,16 +36,17 @@ local SETTINGS = {
 	styleAssTag = "{\\rDefault\\an7\\fs12\\b0\\blur0\\bord1\\1c&H996F9A\\3c\\H000000\\q2}",
 
 	-- List entry wrapper templates, used by mp.assdraw
+	-- \\c&...& = color, BGR format
 	-- %item = list item
 	wrapper = {
-		normal = "{\\c&FFFFFF&}⚪  %item",
+		normal = "{\\c&FFFFFF&}◯  %item",
 		hovering = "{\\c&33FFFF&}➔  %item",
-		selected = "{\\c&FFFFFF&}⚫  %item",
-		playing = "{\\c&FFFFFF&}▷ %item",
-		hoveringSelected = "{\\c&FFFFFF&}➔  %item",
+		selected = "{\\c&FFFFFF&}➤  %item",
+		playing = "{\\c&FFFFFF&}▷  %item",
+		hoveringSelected = "{\\c&33FFFF&}➤  %item",
 		playingHovering = "{\\c&33FFFF&}▷  %item",
 		playingSelected = "{\\c&FFFFFF&}▶  %item",
-		hoveringPlayingSelceted = "{\\c&C1C1FF}➔  %item",
+		hoveringPlayingSelceted = "{\\c&33FFFF}▶  %item",
 	},
 
 	-- When it is TRUE, all bindings will restore after closing the playlist.
