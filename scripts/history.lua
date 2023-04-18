@@ -183,6 +183,18 @@ local function onMoveEnd()
 	showFunc()
 end
 
+local function onSelectItem()
+	osdPlaylist.addToSet(osdObj.selection, osdObj.cursor)
+
+	showFunc()
+end
+
+local function onUnselectItem()
+	osdPlaylist.removeFromSet(osdObj.selection, osdObj.cursor)
+
+	showFunc()
+end
+
 local function addKeyBinds()
 	kb.bindKeysForced(
 		osdObj.settings.key.moveUp,
@@ -190,39 +202,46 @@ local function addKeyBinds()
 		onMoveUp,
 		"repeatable"
 	)
-
 	kb.bindKeysForced(
 		osdObj.settings.key.moveDown,
 		"move-down",
 		onMoveDown,
 		"repeatable"
 	)
-
 	kb.bindKeysForced(
 		osdObj.settings.key.movePageUp,
 		"move-page-up",
 		onMovePageUp,
 		"repeatable"
 	)
-
 	kb.bindKeysForced(
 		osdObj.settings.key.movePageDown,
 		"move-page-down",
 		onMovePageDown,
 		"repeatable"
 	)
-
 	kb.bindKeysForced(
 		osdObj.settings.key.moveBegin,
 		"move-begin",
 		onMoveBegin,
 		"repeatable"
 	)
-
 	kb.bindKeysForced(
 		osdObj.settings.key.moveEnd,
 		"move-end",
 		onMoveEnd,
+		"repeatable"
+	)
+	kb.bindKeysForced(
+		osdObj.settings.key.selectItem,
+		"select-item",
+		onSelectItem,
+		"repeatable"
+	)
+	kb.bindKeysForced(
+		osdObj.settings.key.unselectItem,
+		"unselect-item",
+		onUnselectItem,
 		"repeatable"
 	)
 end
@@ -235,6 +254,8 @@ local function removeKeyBinds()
 		kb.unbindKeys(osdObj.settings.key.movePageDown, "move-page-down")
 		kb.unbindKeys(osdObj.settings.key.moveBegin, "move-begin")
 		kb.unbindKeys(osdObj.settings.key.moveEnd, "move-end")
+		kb.unbindKeys(osdObj.settings.key.selectItem, "select-item")
+		kb.unbindKeys(osdObj.settings.key.unselectItem, "unselect-item")
 	end
 end
 
