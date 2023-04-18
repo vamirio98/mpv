@@ -1,23 +1,24 @@
 -- OSD playlist module.
 
+local assdraw = require("mp.assdraw")
+local mp = require("mp")
+local msg = require("mp.msg")
+
 local osd_playlist = {}
 
 -- Default settings.
 local SETTINGS = {
 	-- To bind multiple keys separate them by a space.
 	key = {
-		actionUp = "UP k",
-		actionDown = "DOWN j",
-		actionPageUp = "PGUP Ctrl+b",
-		actionPageDown = "PGDWN Ctrl+f",
-		actionBegin = "HOME gg",
-		actionEnd = "END G",
-		actionRemove = "BS dd",
-		actionClose = "ESC",
+		moveUp = "UP k",
+		moveDown = "DOWN j",
+		movePageUp = "PGUP Ctrl+b",
+		movePageDown = "PGDWN Ctrl+f",
+		moveBegin = "HOME gg",
+		moveEnd = "END G",
+		removeItem = "BS dd",
+		closePlaylist = "ESC",
 	},
-
-	-- OSD timeout on inactivity in seconds, use 0 for no timeout.
-	displayTimeout = 3,
 
 	-- The maximun amount of lines list will render.
 	showAmount = 10,
@@ -47,6 +48,8 @@ local SETTINGS = {
 
 	-- When it is TRUE, all bindings will restore after closing the playlist.
 	dynamicBinding = true,
+
+	keybindsTimer = nil,
 }
 
 -- A playlist object.
@@ -70,14 +73,12 @@ function osd_playlist.setContains(set, key)
 	return set[key] ~= nil
 end
 
-local assdraw = require("mp.assdraw")
-local mp = require("mp")
-local msg = require("mp.msg")
-local utils = require("mp.utils")
-
 -- Get new OSD playlist object.
 function osd_playlist.new()
-	return OBJ
+	local obj = OBJ
+	obj.keyBindsTimer = mp.add_periodic_timer(1, msg.info(""))
+	obj.keyBindsTimer:kill()
+	return obj
 end
 
 -- Select a template according to the list index.
@@ -113,12 +114,10 @@ local function warpItem(template, item)
 	return template:gsub("%%item", item)
 end
 
--- Draw the list.
+-- Show the list.
 -- @obj: OSD playlist object
 -- @list: list [array]
--- @cursor: CursorStatus object
--- @settings: list settings
-function osd_playlist.draw(obj, list)
+function osd_playlist.show(obj, list)
 	local ass = assdraw.ass_new()
 
 	local listLen = #list
@@ -171,7 +170,7 @@ function osd_playlist.draw(obj, list)
 			ass:append(
 				warpItem(
 					selectTemplate(obj, listIndex),
-					listIndex .. "   " .. list[listIndex] .. "\\N"
+					listIndex .. " " .. list[listIndex] .. "\\N"
 				)
 			)
 		end
@@ -181,6 +180,11 @@ function osd_playlist.draw(obj, list)
 		w, h = 0, 0
 	end
 	mp.set_osd_ass(w, h, ass.text)
+end
+
+-- Hide the playlist.
+function osd_playlist.hide()
+	mp.set_osd_ass(0, 0, "")
 end
 
 return osd_playlist

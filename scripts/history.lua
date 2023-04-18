@@ -96,13 +96,114 @@ local function recordHistory()
 	file:close()
 end
 
+--
+-- To show history on screen.
+--
+package.path = package.path
+	.. ";"
+	.. mp.command_native({ "expand-path", "~~/scripts" })
+	.. "/?.lua"
+
+local kb = require("kb")
+local osdPlaylist = require("osd_playlist")
+
+local historyList = {} -- Used to show OSD list.
+-- OSD history timeout on inactivity in seconds, use 0 for no timeout.
+local displayTimeout = 3
+local visible = false -- The history is visible or not.
+local osdObj = osdPlaylist.new()
+local showFunc = nil -- A forward define for function show().
+
+local function onMoveUp()
+	if #historyList == 0 then
+		return
+	end
+
+	if osdObj.cursor > 1 then
+		osdObj.cursor = osdObj.cursor - 1
+	end
+	showFunc()
+end
+
+local function onMoveDown()
+	if #historyList == 0 then
+		return
+	end
+
+	if osdObj.cursor < #historyList then
+		osdObj.cursor = osdObj.cursor + 1
+	end
+	showFunc()
+end
+
+local function addKeyBinds()
+	kb.bindKeysForced(
+		osdObj.settings.key.moveUp,
+		"move-up",
+		onMoveUp,
+		"repeatable"
+	)
+
+	kb.bindKeysForced(
+		osdObj.settings.key.moveDown,
+		"move-down",
+		onMoveDown,
+		"repeatable"
+	)
+end
+
+local function removeKeyBinds()
+	if osdObj.settings.dynamicBinding then
+		kb.unbindKeys(osdObj.settings.key.moveUp, "move-up")
+		kb.unbindKeys(osdObj.settings.key.moveDown, "move-down")
+	end
+end
+
+-- Update history list.
+local function updateList()
+	historyList = {} -- Clear.
+	for i, file in ipairs(history) do
+		historyList[i] = file.title
+	end
+end
+
+local function show()
+	updateList()
+	if #history == 0 then
+		return
+	end
+
+	osdObj.keyBindsTimer:kill()
+	if not visible then
+		addKeyBinds()
+	end
+
+	visible = true
+	osdPlaylist.show(osdObj, historyList)
+
+	osdObj.keyBindsTimer:resume()
+end
+
+local function hide()
+	osdObj.keyBindsTimer:kill()
+	osdPlaylist.hide()
+	visible = false
+	removeKeyBinds()
+end
+
 local function main()
+	showFunc = show
+
+	osdObj.cursor = 1
+	osdObj.keyBindsTimer = mp.add_periodic_timer(displayTimeout, hide)
+
 	readHistory()
+
 	mp.register_event("file-loaded", updateHistory)
-
 	--mp.register_event("end-file", function() end)
-
 	mp.register_event("shutdown", recordHistory)
+
+	kb.bindKeys("h", "show-history", show)
 end
 
 main()
