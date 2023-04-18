@@ -112,7 +112,8 @@ local historyList = {} -- Used to show OSD list.
 local displayTimeout = 5
 local visible = false -- The history is visible or not.
 local osdObj = osdPlaylist.new()
-local showFunc = nil -- A forward define for function show().
+local showFunc = nil -- The forward define for function show().
+local hideFunc = nil -- The forward define for function hide().
 
 local function onMoveUp()
 	if #historyList == 0 then
@@ -267,6 +268,11 @@ local function addKeyBinds()
 		onRemoveItem,
 		"repeatable"
 	)
+	kb.bindKeysForced(
+		osdObj.settings.key.closePlaylist,
+		"close-playlist",
+		hideFunc
+	)
 end
 
 local function removeKeyBinds()
@@ -280,6 +286,7 @@ local function removeKeyBinds()
 		kb.unbindKeys(osdObj.settings.key.selectItem, "select-item")
 		kb.unbindKeys(osdObj.settings.key.unselectItem, "unselect-item")
 		kb.unbindKeys(osdObj.settings.key.removeItem, "remove-item")
+		kb.unbindKeys(osdObj.settings.key.closePlaylist, "close-playlist")
 	end
 end
 
@@ -317,6 +324,7 @@ end
 
 local function main()
 	showFunc = show
+	hideFunc = hide
 
 	osdObj.cursor = 1
 	osdObj.playing = 1
