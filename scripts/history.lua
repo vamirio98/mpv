@@ -109,7 +109,7 @@ local osdPlaylist = require("osd_playlist")
 
 local historyList = {} -- Used to show OSD list.
 -- OSD history timeout on inactivity in seconds, use 0 for no timeout.
-local displayTimeout = 3
+local displayTimeout = 5
 local visible = false -- The history is visible or not.
 local osdObj = osdPlaylist.new()
 local showFunc = nil -- A forward define for function show().
@@ -122,6 +122,7 @@ local function onMoveUp()
 	if osdObj.cursor > 1 then
 		osdObj.cursor = osdObj.cursor - 1
 	end
+
 	showFunc()
 end
 
@@ -133,6 +134,52 @@ local function onMoveDown()
 	if osdObj.cursor < #historyList then
 		osdObj.cursor = osdObj.cursor + 1
 	end
+
+	showFunc()
+end
+
+local function onMovePageUp()
+	if #historyList == 0 or osdObj.cursor == 1 then
+		return
+	end
+
+	osdObj.cursor = osdObj.cursor - osdObj.settings.showAmount
+	if osdObj.cursor < 1 then
+		osdObj.cursor = 1
+	end
+
+	showFunc()
+end
+
+local function onMovePageDown()
+	if #historyList == 0 or osdObj.cursor == #historyList then
+		return
+	end
+
+	osdObj.cursor = osdObj.cursor + osdObj.settings.showAmount
+	if osdObj.cursor > #historyList then
+		osdObj.cursor = #historyList
+	end
+
+	showFunc()
+end
+
+local function onMoveBegin()
+	if #historyList == 0 or osdObj.cursor == 1 then
+		return
+	end
+
+	osdObj.cursor = 1
+	showFunc()
+end
+
+local function onMoveEnd()
+	if #historyList == 0 or osdObj.cursor == #historyList then
+		return
+	end
+
+	osdObj.cursor = #historyList
+
 	showFunc()
 end
 
@@ -150,12 +197,44 @@ local function addKeyBinds()
 		onMoveDown,
 		"repeatable"
 	)
+
+	kb.bindKeysForced(
+		osdObj.settings.key.movePageUp,
+		"move-page-up",
+		onMovePageUp,
+		"repeatable"
+	)
+
+	kb.bindKeysForced(
+		osdObj.settings.key.movePageDown,
+		"move-page-down",
+		onMovePageDown,
+		"repeatable"
+	)
+
+	kb.bindKeysForced(
+		osdObj.settings.key.moveBegin,
+		"move-begin",
+		onMoveBegin,
+		"repeatable"
+	)
+
+	kb.bindKeysForced(
+		osdObj.settings.key.moveEnd,
+		"move-end",
+		onMoveEnd,
+		"repeatable"
+	)
 end
 
 local function removeKeyBinds()
 	if osdObj.settings.dynamicBinding then
 		kb.unbindKeys(osdObj.settings.key.moveUp, "move-up")
 		kb.unbindKeys(osdObj.settings.key.moveDown, "move-down")
+		kb.unbindKeys(osdObj.settings.key.movePageUp, "move-page-up")
+		kb.unbindKeys(osdObj.settings.key.movePageDown, "move-page-down")
+		kb.unbindKeys(osdObj.settings.key.moveBegin, "move-begin")
+		kb.unbindKeys(osdObj.settings.key.moveEnd, "move-end")
 	end
 end
 

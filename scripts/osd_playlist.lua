@@ -14,9 +14,9 @@ local SETTINGS = {
 		moveDown = "DOWN j",
 		movePageUp = "PGUP Ctrl+b",
 		movePageDown = "PGDWN Ctrl+f",
-		moveBegin = "HOME gg",
-		moveEnd = "END G",
-		removeItem = "BS dd",
+		moveBegin = "HOME Ctrl+a",
+		moveEnd = "END Ctrl+e",
+		removeItem = "BS Ctrl+d",
 		closePlaylist = "ESC",
 	},
 
