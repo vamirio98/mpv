@@ -8,14 +8,9 @@
 local mp = require("mp")
 local msg = require("mp.msg") -- Show information and debug.
 
-package.path = package.path
-	.. ";"
-	.. mp.command_native({ "expand-path", "~~/scripts" })
-	.. "/?.lua"
-
-local kb = require("kb")
-local osdPlaylist = require("osd_playlist")
-
+--
+-- To write history to log.
+--
 local history = {} -- Use to record history, 1 -> end <=> newest -> oldest.
 local historyFilePath = mp.command_native({ "expand-path", "~/" })
 	.. "/.cache/mpv/history.txt"
@@ -32,24 +27,28 @@ local function wrap(t, n, l)
 	end
 end
 
+-- Read the history.
 -- Create the file if not existed, note that the parent folder has to exist.
-local file = io.open(historyFilePath, "a+")
-if not file then
-	msg.error("Can't open file " .. historyFilePath .. " to read", 3)
-	return
+local function readHistory()
+	local file = io.open(historyFilePath, "a+")
+	if not file then
+		msg.error("Can't open file " .. historyFilePath .. " to read")
+		return
+	end
+	-- Read all history.
+	local getLine = file:lines("l")
+	while getLine() do
+		local line = getLine()
+		history[#history + 1] =
+			{ time = string.sub(line, 2, 20), title = string.sub(line, 23) }
+		line = getLine()
+		history[#history].path = line
+	end
+	file:close()
 end
--- Read all history.
-local getLine = file:lines("l")
-while getLine() do
-	local line = getLine()
-	history[#history + 1] =
-		{ time = string.sub(line, 2, 20), title = string.sub(line, 23) }
-	line = getLine()
-	history[#history].path = line
-end
-file:close()
 
-mp.register_event("file-loaded", function()
+-- Update the history.
+local function updateHistory()
 	local inHistory = false
 	local playTime = os.date("%Y/%m/%d %X")
 	local videoTitle = mp.get_property("filename")
@@ -80,14 +79,13 @@ mp.register_event("file-loaded", function()
 		}
 		wrap(history, 1)
 	end
-end)
+end
 
---mp.register_event("end-file", function() end)
-
-mp.register_event("shutdown", function()
-	file = io.open(historyFilePath, "w")
+-- Write history into file.
+local function recordHistory()
+	local file = io.open(historyFilePath, "w")
 	if not file then
-		msg.error("Can't open " .. historyFilePath .. " to write.", 3)
+		msg.error("Can't open " .. historyFilePath .. " to write.")
 		return
 	end
 
@@ -96,20 +94,15 @@ mp.register_event("shutdown", function()
 	end
 
 	file:close()
-end)
-
-function ShowHistory(duration)
-	if not duration then
-		duration = 3
-	end
-
-	local list = {}
-	for _, f in ipairs(history) do
-		table.insert(list, f.title)
-	end
-	local osdList = osdPlaylist.new()
-	osdList.cursor = 1
-	osdPlaylist.draw(osdList, list)
 end
 
-kb.bindKeys("h", "show_history", ShowHistory)
+local function main()
+	readHistory()
+	mp.register_event("file-loaded", updateHistory)
+
+	--mp.register_event("end-file", function() end)
+
+	mp.register_event("shutdown", recordHistory)
+end
+
+main()
