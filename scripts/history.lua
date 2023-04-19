@@ -105,13 +105,32 @@ package.path = package.path
 	.. "/?.lua"
 
 local kb = require("kb")
-local osdPlaylist = require("osd_playlist")
+local osdList = require("osd_list")
 
 local historyList = {} -- Used to show OSD list.
 -- OSD history timeout on inactivity in seconds, use 0 for no timeout.
 local displayTimeout = 5
 local visible = false -- The history is visible or not.
-local osdObj = osdPlaylist.new()
+local osdObj = osdList.new()
+local keyBindsTimer = nil
+-- To bind multiple key separate them by a space.
+local keys = {
+	moveUp = "UP k",
+	moveDown = "DOWN j",
+	movePageUp = "PGUP Ctrl+b",
+	movePageDown = "PGDWN Ctrl+f",
+	moveBegin = "HOME Ctrl+a",
+	moveEnd = "END Ctrl+e",
+	confirmEntry = "ENTER",
+	selectEntry = "RIGHT l",
+	unselectEntry = "LEFT h",
+	removeEntry = "BS Ctrl+d",
+	closeList = "ESC",
+}
+
+-- When it is TRUE, all bindings will restore after closing the list.
+local dynamicBinding = true
+local playing = 0 -- Current playing entry position, 1-based.
 local showFunc = nil -- The forward define for function show().
 local hideFunc = nil -- The forward define for function hide().
 
@@ -191,13 +210,13 @@ local function onPlayEntry()
 end
 
 local function onSelectEntry()
-	osdPlaylist.addToSet(osdObj.selection, osdObj.cursor)
+	osdList.addToSet(osdObj.selection, osdObj.cursor)
 
 	showFunc()
 end
 
 local function onUnselectEntry()
-	osdPlaylist.removeFromSet(osdObj.selection, osdObj.cursor)
+	osdList.removeFromSet(osdObj.selection, osdObj.cursor)
 
 	showFunc()
 end
@@ -206,15 +225,15 @@ local function onRemoveEntry()
 	table.remove(history, osdObj.cursor)
 
 	-- Update selection.
-	if osdPlaylist.setContains(osdObj.selection, osdObj.cursor) then
-		osdPlaylist.removeFromSet(osdObj.selection, osdObj.cursor)
+	if osdList.setContains(osdObj.selection, osdObj.cursor) then
+		osdList.removeFromSet(osdObj.selection, osdObj.cursor)
 	end
 	local tmp = {}
 	for k, _ in pairs(osdObj.selection) do
 		if k > osdObj.cursor then
-			osdPlaylist.addToSet(tmp, k - 1)
+			osdList.addToSet(tmp, k - 1)
 		else
-			osdPlaylist.addToSet(tmp, k)
+			osdList.addToSet(tmp, k)
 		end
 	end
 	osdObj.selection = tmp
@@ -223,87 +242,107 @@ local function onRemoveEntry()
 end
 
 local function addKeyBinds()
+	kb.bindKeysForced(keys.moveUp, "move-up", onMoveUp, "repeatable")
+	kb.bindKeysForced(keys.moveDown, "move-down", onMoveDown, "repeatable")
 	kb.bindKeysForced(
-		osdObj.settings.key.moveUp,
-		"move-up",
-		onMoveUp,
-		"repeatable"
-	)
-	kb.bindKeysForced(
-		osdObj.settings.key.moveDown,
-		"move-down",
-		onMoveDown,
-		"repeatable"
-	)
-	kb.bindKeysForced(
-		osdObj.settings.key.movePageUp,
+		keys.movePageUp,
 		"move-page-up",
 		onMovePageUp,
 		"repeatable"
 	)
 	kb.bindKeysForced(
-		osdObj.settings.key.movePageDown,
+		keys.movePageDown,
 		"move-page-down",
 		onMovePageDown,
 		"repeatable"
 	)
+	kb.bindKeysForced(keys.moveBegin, "move-begin", onMoveBegin, "repeatable")
+	kb.bindKeysForced(keys.moveEnd, "move-end", onMoveEnd, "repeatable")
+	kb.bindKeysForced(keys.confirmEntry, "play-entry", onPlayEntry, "repeatable")
 	kb.bindKeysForced(
-		osdObj.settings.key.moveBegin,
-		"move-begin",
-		onMoveBegin,
-		"repeatable"
-	)
-	kb.bindKeysForced(
-		osdObj.settings.key.moveEnd,
-		"move-end",
-		onMoveEnd,
-		"repeatable"
-	)
-	kb.bindKeysForced(
-		osdObj.settings.key.playEntry,
-		"play-entry",
-		onPlayEntry,
-		"repeatable"
-	)
-	kb.bindKeysForced(
-		osdObj.settings.key.selectEntry,
+		keys.selectEntry,
 		"select-entry",
 		onSelectEntry,
 		"repeatable"
 	)
 	kb.bindKeysForced(
-		osdObj.settings.key.unselectEntry,
+		keys.unselectEntry,
 		"unselect-entry",
 		onUnselectEntry,
 		"repeatable"
 	)
 	kb.bindKeysForced(
-		osdObj.settings.key.removeEntry,
+		keys.removeEntry,
 		"remove-entry",
 		onRemoveEntry,
 		"repeatable"
 	)
-	kb.bindKeysForced(
-		osdObj.settings.key.closePlaylist,
-		"close-playlist",
-		hideFunc
-	)
+	kb.bindKeysForced(keys.closeList, "close-playlist", hideFunc)
 end
 
 local function removeKeyBinds()
-	if osdObj.settings.dynamicBinding then
-		kb.unbindKeys(osdObj.settings.key.moveUp, "move-up")
-		kb.unbindKeys(osdObj.settings.key.moveDown, "move-down")
-		kb.unbindKeys(osdObj.settings.key.movePageUp, "move-page-up")
-		kb.unbindKeys(osdObj.settings.key.movePageDown, "move-page-down")
-		kb.unbindKeys(osdObj.settings.key.moveBegin, "move-begin")
-		kb.unbindKeys(osdObj.settings.key.moveEnd, "move-end")
-		kb.unbindKeys(osdObj.settings.key.playEntry, "play-entry")
-		kb.unbindKeys(osdObj.settings.key.selectEntry, "select-entry")
-		kb.unbindKeys(osdObj.settings.key.unselectEntry, "unselect-entry")
-		kb.unbindKeys(osdObj.settings.key.removeEntry, "remove-entry")
-		kb.unbindKeys(osdObj.settings.key.closePlaylist, "close-playlist")
+	if dynamicBinding then
+		kb.unbindKeys(keys.moveUp, "move-up")
+		kb.unbindKeys(keys.moveDown, "move-down")
+		kb.unbindKeys(keys.movePageUp, "move-page-up")
+		kb.unbindKeys(keys.movePageDown, "move-page-down")
+		kb.unbindKeys(keys.moveBegin, "move-begin")
+		kb.unbindKeys(keys.moveEnd, "move-end")
+		kb.unbindKeys(keys.confirmEntry, "play-entry")
+		kb.unbindKeys(keys.selectEntry, "select-entry")
+		kb.unbindKeys(keys.unselectEntry, "unselect-entry")
+		kb.unbindKeys(keys.removeEntry, "remove-entry")
+		kb.unbindKeys(keys.closeList, "close-playlist")
 	end
+end
+
+-- List entry wrapper templates, used by mp.assdraw
+-- \\c&...& = color, BGR format
+-- %entry = list entry
+local entryTemplates = {
+	normal = "{\\c&FFFFFF&}○  %entry",
+	hovering = "{\\c&33FFFF&}➔  %entry",
+	selected = "{\\c&FFFFFF&}➤  %entry",
+	playing = "{\\c&FFFFFF&}▷  %entry",
+	hoveringSelected = "{\\c&33FFFF&}➤  %entry",
+	playingHovering = "{\\c&33FFFF&}▷  %entry",
+	playingSelected = "{\\c&FFFFFF&}▶  %entry",
+	hoveringPlayingSelceted = "{\\c&33FFFF}▶  %entry",
+}
+
+-- Select a template according to the list index.
+-- @obj: OSD playlist object
+-- @index: list index of the current entry
+local function selectTemplate(index)
+	local template = entryTemplates.normal
+
+	if osdList.setContains(osdObj.selection, index) then
+		if index == playing then
+			template = index == osdObj.cursor
+					and entryTemplates.hoveringPlayingSelceted
+				or entryTemplates.playingSelected
+		else
+			template = index == osdObj.cursor
+					and entryTemplates.hoveringSelected
+				or entryTemplates.selected
+		end
+	else
+		if index == playing then
+			template = index == osdObj.cursor and entryTemplates.playingHovering
+				or entryTemplates.playing
+		elseif index == osdObj.cursor then
+			template = entryTemplates.hovering
+		end
+	end
+
+	return template
+end
+
+local function wrapEntry(_, index)
+	return selectTemplate(index):gsub(
+		"%%entry",
+		index .. "   " .. historyList[index]
+	)
 end
 
 -- Update history list.
@@ -320,20 +359,20 @@ local function show()
 		return
 	end
 
-	osdObj.keyBindsTimer:kill()
+	keyBindsTimer:kill()
 	if not visible then
 		addKeyBinds()
 	end
 
 	visible = true
-	osdPlaylist.show(osdObj, historyList)
+	osdList.show(osdObj, historyList, wrapEntry)
 
-	osdObj.keyBindsTimer:resume()
+	keyBindsTimer:resume()
 end
 
 local function hide()
-	osdObj.keyBindsTimer:kill()
-	osdPlaylist.hide()
+	keyBindsTimer:kill()
+	osdList.hide()
 	visible = false
 	removeKeyBinds()
 end
@@ -351,7 +390,10 @@ local function main()
 	hideFunc = hide
 
 	osdObj.cursor = 1
-	osdObj.keyBindsTimer = mp.add_periodic_timer(displayTimeout, hide)
+	osdObj.settings.styleAssTag =
+		"{\\rDefault\\an7\\fnIosevka\\fs12\\b0\\blur0\\bord1\\1c&H996F9A\\3c\\H000000\\q2}"
+	keyBindsTimer = mp.add_periodic_timer(displayTimeout, hide)
+	keyBindsTimer:kill()
 
 	readHistory()
 
