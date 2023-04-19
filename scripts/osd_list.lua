@@ -16,8 +16,9 @@ local SETTINGS = {
 	scaleByWindow = true,
 
 	-- What to show when list is truncated.
-	listSlicedPrefix = "▲",
-	listSlicedSuffix = "▼",
+	-- \\c&...& = color, BGR format
+	listSlicedPrefix = "{\\c&FACE87&}▲",
+	listSlicedSuffix = "{\\c&FACE87&}▼",
 
 	styleAssTag = "{\\rDefault\\an7\\fs12\\b0\\blur0\\bord1\\1c&H996F9A\\3c\\H000000\\q2}",
 }
@@ -50,10 +51,11 @@ end
 -- Show the list.
 -- @obj: OSD list object
 -- @list: list [array]
+-- @header: list header
 -- @wrap: function used to wrap entry, it accepts TWO arguments:
 --        DISPLAY_INDEX: rank in display section of current entry
 --        LIST_INDEX: rank in the list of current entry
-function osd_list.show(obj, list, wrap)
+function osd_list.show(obj, list, header, wrap)
 	local ass = assdraw.ass_new()
 
 	local listLen = #list
@@ -62,6 +64,10 @@ function osd_list.show(obj, list, wrap)
 	local w = aspectRatio * h
 
 	ass:append(obj.settings.styleAssTag)
+
+	if header then
+		ass:append(header .. "\\N")
+	end
 
 	-- (visible index, list index) pairs of list entries that should be rendered.
 	local visibleIndices = {}

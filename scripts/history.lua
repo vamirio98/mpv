@@ -113,6 +113,10 @@ local displayTimeout = 5
 local visible = false -- The history is visible or not.
 local osdObj = osdList.new()
 local keyBindsTimer = nil
+-- History list header template.
+-- %pos: cursor's position
+-- %listLen: length of the history list
+local listHeader = "History [%pos/%listLen]"
 -- To bind multiple key separate them by a space.
 local keys = {
 	moveUp = "UP k",
@@ -296,6 +300,13 @@ local function removeKeyBinds()
 	end
 end
 
+local function wrapHeader(header)
+	local len = tostring(#historyList):len()
+	return header
+		:gsub("%%pos", string.format("%0" .. len .. "d", osdObj.cursor))
+		:gsub("%%listLen", #historyList)
+end
+
 -- List entry wrapper templates, used by mp.assdraw
 -- \\c&...& = color, BGR format
 -- %entry = list entry
@@ -339,10 +350,7 @@ local function selectTemplate(index)
 end
 
 local function wrapEntry(_, index)
-	return selectTemplate(index):gsub(
-		"%%entry",
-		index .. "   " .. historyList[index]
-	)
+	return selectTemplate(index):gsub("%%entry", historyList[index])
 end
 
 -- Update history list.
@@ -365,7 +373,7 @@ local function show()
 	end
 
 	visible = true
-	osdList.show(osdObj, historyList, wrapEntry)
+	osdList.show(osdObj, historyList, wrapHeader(listHeader), wrapEntry)
 
 	keyBindsTimer:resume()
 end
