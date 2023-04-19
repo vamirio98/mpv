@@ -121,7 +121,7 @@ local keys = {
 	movePageDown = "PGDWN Ctrl+f",
 	moveBegin = "HOME Ctrl+a",
 	moveEnd = "END Ctrl+e",
-	confirmEntry = "ENTER",
+	playEntry = "ENTER",
 	selectEntry = "RIGHT l",
 	unselectEntry = "LEFT h",
 	removeEntry = "BS Ctrl+d",
@@ -258,7 +258,7 @@ local function addKeyBinds()
 	)
 	kb.bindKeysForced(keys.moveBegin, "move-begin", onMoveBegin, "repeatable")
 	kb.bindKeysForced(keys.moveEnd, "move-end", onMoveEnd, "repeatable")
-	kb.bindKeysForced(keys.confirmEntry, "play-entry", onPlayEntry, "repeatable")
+	kb.bindKeysForced(keys.playEntry, "play-entry", onPlayEntry, "repeatable")
 	kb.bindKeysForced(
 		keys.selectEntry,
 		"select-entry",
@@ -277,7 +277,7 @@ local function addKeyBinds()
 		onRemoveEntry,
 		"repeatable"
 	)
-	kb.bindKeysForced(keys.closeList, "close-playlist", hideFunc)
+	kb.bindKeysForced(keys.closeList, "close-list", hideFunc)
 end
 
 local function removeKeyBinds()
@@ -288,11 +288,11 @@ local function removeKeyBinds()
 		kb.unbindKeys(keys.movePageDown, "move-page-down")
 		kb.unbindKeys(keys.moveBegin, "move-begin")
 		kb.unbindKeys(keys.moveEnd, "move-end")
-		kb.unbindKeys(keys.confirmEntry, "play-entry")
+		kb.unbindKeys(keys.playEntry, "play-entry")
 		kb.unbindKeys(keys.selectEntry, "select-entry")
 		kb.unbindKeys(keys.unselectEntry, "unselect-entry")
 		kb.unbindKeys(keys.removeEntry, "remove-entry")
-		kb.unbindKeys(keys.closeList, "close-playlist")
+		kb.unbindKeys(keys.closeList, "close-list")
 	end
 end
 
@@ -311,7 +311,7 @@ local entryTemplates = {
 }
 
 -- Select a template according to the list index.
--- @obj: OSD playlist object
+-- @obj: OSD list object
 -- @index: list index of the current entry
 local function selectTemplate(index)
 	local template = entryTemplates.normal
