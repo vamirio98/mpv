@@ -116,7 +116,7 @@ local keyBindsTimer = nil
 -- History list header template.
 -- %pos: cursor's position
 -- %listLen: length of the history list
-local listHeader = "History [%pos/%listLen]"
+local listHeader = "History [%pos/%listLen] (press ? for help)"
 -- To bind multiple key separate them by a space.
 local keys = {
 	moveUp = "UP k",
@@ -130,6 +130,22 @@ local keys = {
 	unselectEntry = "LEFT h",
 	removeEntry = "BS Ctrl+d",
 	closeList = "ESC",
+	showHelp = "?",
+}
+
+local helpMsg = {
+	"Up, k: move to previous entry",
+	"Down, j: move to next entry",
+	"PgUp, Ctrl+b: move to previous page",
+	"PgDn, Ctrl+f: move to next page",
+	"Home, Ctrl+a: move to beginning",
+	"End, Ctrl+e: move to end",
+	"Enter: play entry",
+	"Right, l: select entry",
+	"Left, h: unselect entry",
+	"Backspace, Ctrl+d: remove entry",
+	"Esc: close the list",
+	"?: show help",
 }
 
 -- When it is TRUE, all bindings will restore after closing the list.
@@ -245,6 +261,58 @@ local function onRemoveEntry()
 	showFunc()
 end
 
+local function onShowHelp()
+	hideFunc()
+
+	-- Record cursor position in history list and set it to 1 before show the
+	-- help.
+	local cursorPos = osdObj.cursor
+	osdObj.cursor = 1
+
+	local showHelp = function()
+		osdList.show(
+			osdObj,
+			helpMsg,
+			"Help (press j, k to navigate and <ESC> to quit)",
+			function(_, index)
+				return "{\\c&808080&}"
+					.. helpMsg[index]:gsub(":", "{\\c&FFFFFF&}")
+			end
+		)
+	end
+
+	showHelp()
+
+	-- Set key binds.
+	kb.bindKeysForced("k", "move-page-up", function()
+		osdObj.cursor = osdObj.cursor - osdObj.settings.showAmount
+		if osdObj.cursor < 1 then
+			osdObj.cursor = 1
+		end
+		showHelp()
+	end, "repeatable")
+
+	kb.bindKeysForced("j", "move-page-down", function()
+		osdObj.cursor = osdObj.cursor + osdObj.settings.showAmount
+		if osdObj.cursor > #historyList then
+			osdObj.cursor = #historyList
+		end
+		showHelp()
+	end, "repeatable")
+
+	kb.bindKeysForced("ESC", "close-help", function()
+		kb.unbindKeys("k", "move-page-up")
+		kb.unbindKeys("j", "move-page-down")
+		kb.unbindKeys("ESC", "close-help")
+
+		osdList.hide()
+
+		-- Restore cursor position in history list.
+		osdObj.cursor = cursorPos
+		showFunc()
+	end)
+end
+
 local function addKeyBinds()
 	kb.bindKeysForced(keys.moveUp, "move-up", onMoveUp, "repeatable")
 	kb.bindKeysForced(keys.moveDown, "move-down", onMoveDown, "repeatable")
@@ -282,6 +350,7 @@ local function addKeyBinds()
 		"repeatable"
 	)
 	kb.bindKeysForced(keys.closeList, "close-list", hideFunc)
+	kb.bindKeysForced(keys.showHelp, "show-help", onShowHelp)
 end
 
 local function removeKeyBinds()
@@ -297,6 +366,7 @@ local function removeKeyBinds()
 		kb.unbindKeys(keys.unselectEntry, "unselect-entry")
 		kb.unbindKeys(keys.removeEntry, "remove-entry")
 		kb.unbindKeys(keys.closeList, "close-list")
+		kb.unbindKeys(keys.showHelp, "show-help")
 	end
 end
 
