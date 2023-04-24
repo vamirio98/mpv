@@ -86,7 +86,6 @@ local function onUp()
 	if #files ~= 0 and osdObj.cursor > 1 then
 		osdObj.cursor = osdObj.cursor - 1
 	end
-	msg.info("hello")
 
 	show()
 end
@@ -95,8 +94,6 @@ local function onDown()
 	if #files ~= 0 and osdObj.cursor < #files then
 		osdObj.cursor = osdObj.cursor + 1
 	end
-
-	msg.info("world")
 
 	show()
 end
@@ -173,8 +170,7 @@ local function removeKeyBinds()
 end
 
 function VdirOpen(absPath)
-	path = absPath
-	msg.info("Path:", path)
+	path = absPath:gsub("\\", "/") -- Use "/" as the path separator uniformly.
 	files = utils.readdir(path)
 	table.sort(files, sort)
 

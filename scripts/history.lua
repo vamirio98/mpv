@@ -52,7 +52,8 @@ local function updateHistory()
 	local inHistory = false
 	local playTime = os.date("%Y/%m/%d %X")
 	local videoTitle = mp.get_property("filename")
-	local videoPath = mp.get_property("path")
+	-- Use "/" as the path separator uniformly.
+	local videoPath = mp.get_property("path"):gsub("\\", "/")
 
 	for i, v in ipairs(history) do
 		-- This video has been play before, update the play time.
