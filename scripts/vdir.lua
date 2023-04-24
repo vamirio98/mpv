@@ -1,6 +1,9 @@
 -- Operate directory in Vim way.
 
 local options = {
+	-- Keys.
+	keyParentDir = "-",
+	keyEnter = "ENTER i", -- Enter directory or open file.
 	keyUp = "UP k",
 	keyDown = "DOWN j",
 	keyPgUp = "PGUP Ctrl+b",
@@ -8,6 +11,12 @@ local options = {
 	keyBegin = "HOME Ctrl+a",
 	keyEnd = "END Ctrl+e",
 	keyQuit = "ESC",
+
+	-- Entry templates.
+	dircetory = "{\\c&HFFFF00&}[d] ",
+	file = "{\\c&HFFFFFF&}[f] ",
+	hoveringDir = "{\\c&H33FFFF&}[d] ",
+	hoveringFile = "{\\c&H33FFFF&}[f] ",
 }
 
 local mp = require("mp")
@@ -30,16 +39,47 @@ local show = nil
 local hide = nil
 
 local function sort(a, b)
-	local x = utils.file_info(path .. "/" .. a)
-	local y = utils.file_info(path .. "/" .. b)
+	local x = utils.file_info(utils.join_path(path, a))
+	local y = utils.file_info(utils.join_path(path, b))
 
 	local res = true
 	if (x.is_dir and y.is_dir) or (x.is_file and y.is_file) then
 		res = a < b
 	else
-		res = x.is_file
+		res = x.is_dir
 	end
 	return res
+end
+
+local function onParentDir()
+	if #files == 0 then
+		return
+	end
+
+	local tmp = utils.split_path(path)
+	-- Remove the last path separator.
+	if
+		#tmp > 1
+		and (
+			string.sub(tmp, #tmp, #tmp) == "\\"
+			or string.sub(tmp, #tmp, #tmp) == "/"
+		)
+	then
+		tmp = string.sub(tmp, 1, #tmp - 1)
+	end
+	VdirOpen(tmp)
+end
+
+local function onEnter()
+	if #files == 0 then
+		return
+	end
+	local fullPath = utils.join_path(path, files[osdObj.cursor])
+	if utils.file_info(fullPath).is_dir then
+		VdirOpen(fullPath)
+	else
+		mp.commandv("loadfile", fullPath, "replace")
+	end
 end
 
 local function onUp()
@@ -104,6 +144,13 @@ local function onQuit()
 end
 
 local function addKeyBinds()
+	kb.bindKeysForced(
+		options.keyParentDir,
+		"parent-dir",
+		onParentDir,
+		"repeatable"
+	)
+	kb.bindKeysForced(options.keyEnter, "enter", onEnter, "repeatable")
 	kb.bindKeysForced(options.keyUp, "up", onUp, "repeatable")
 	kb.bindKeysForced(options.keyDown, "down", onDown, "repeatable")
 	kb.bindKeysForced(options.keyPgUp, "page-up", onPgUp, "repeatable")
@@ -114,6 +161,8 @@ local function addKeyBinds()
 end
 
 local function removeKeyBinds()
+	kb.unbindKeys(options.keyParentDir, "parent-dir")
+	kb.unbindKeys(options.keyEnter, "enter")
 	kb.unbindKeys(options.keyUp, "up")
 	kb.unbindKeys(options.keyDown, "down")
 	kb.unbindKeys(options.keyPgUp, "page-up")
@@ -123,12 +172,46 @@ local function removeKeyBinds()
 	kb.unbindKeys(options.keyQuit, "quit")
 end
 
+function VdirOpen(absPath)
+	path = absPath
+	msg.info("Path:", path)
+	files = utils.readdir(path)
+	table.sort(files, sort)
+
+	osdObj.cursor = #files == 0 and 0 or 1 -- Reset.
+
+	if visible then -- Hide previous list but do NOT remove key binds.
+		osdList.hide()
+	else
+		-- This key will be used to move to parent directory.
+		kb.unbindKeys("-", "vidr-open-dir")
+	end
+	show()
+end
+
+local function onVdirOpenDir()
+	VdirOpen(utils.getcwd())
+end
+
+local function wrapEntry(_, index)
+	local fullPath = utils.join_path(path, files[index])
+	local template = nil
+	if utils.file_info(fullPath).is_dir then
+		template = index == osdObj.cursor and options.hoveringDir
+			or options.dircetory
+	else
+		template = index == osdObj.cursor and options.hoveringFile
+			or options.file
+	end
+	return template .. files[index]
+end
+
 local function doShow()
 	local list = { "Empty" }
 	if #files ~= 0 then
 		list = files
 	end
-	osdList.show(osdObj, list, path)
+	osdList.show(osdObj, list, path, wrapEntry)
 	if not visible then
 		addKeyBinds()
 		visible = true
@@ -139,27 +222,17 @@ local function doHide()
 	removeKeyBinds()
 	osdList.hide()
 	visible = false
-end
 
-function VdirOpen(absPath)
-	path = absPath
-	files = utils.readdir(path)
-	table.sort(files, sort)
-
-	if visible then -- Hide previous list but do NOT remove key binds.
-		osdObj.cursor = 0 -- Reset.
-		osdList.hide()
-	end
-	show()
-end
-
-local function onVdirOpenDir()
-	VdirOpen(utils.getcwd())
+	-- Rebind key to open directory list.
+	kb.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
 end
 
 local function main()
 	show = doShow
 	hide = doHide
+
+	osdObj.settings.styleAssTag =
+		"{\\rDefault\\an7\\fnIosevka\\fs12\\b0\\blur0\\bord1\\1c&H996F9A\\3c\\H000000\\q2}"
 
 	kb.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
 end
