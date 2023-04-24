@@ -243,7 +243,7 @@ end
 local function onEnter()
 	mp.commandv("loadfile", history[osdObj.cursor].path, "replace")
 
-	show()
+	hide()
 end
 
 local function onSelect()

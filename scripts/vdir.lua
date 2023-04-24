@@ -186,7 +186,14 @@ function VdirOpen(absPath)
 end
 
 local function onVdirOpenDir()
-	VdirOpen(utils.getcwd())
+	local dir = nil
+	if mp.get_property_native("idle-active") then
+		dir = utils.getcwd()
+	else
+		dir = utils.split_path(mp.get_property("path"))
+		dir = dir:sub(1, #dir - 1)
+	end
+	VdirOpen(dir)
 end
 
 local function wrapEntry(_, index)
