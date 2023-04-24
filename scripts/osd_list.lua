@@ -6,8 +6,8 @@ local msg = require("mp.msg")
 
 local osd_list = {}
 
--- Default settings.
-local SETTINGS = {
+-- Default options.
+local OPTIONS = {
 	-- The maximun amount of lines list will render.
 	showAmount = 10,
 
@@ -25,7 +25,7 @@ local SETTINGS = {
 
 -- A list object.
 local OBJ = {
-	settings = SETTINGS,
+	options = OPTIONS,
 	selection = {}, -- Selected entries, a list of the index. This is a SET.
 	cursor = 0, -- Cursor's position, 1-based.
 }
@@ -63,7 +63,7 @@ function osd_list.show(obj, list, header, wrap)
 	local h = 360
 	local w = aspectRatio * h
 
-	ass:append(obj.settings.styleAssTag)
+	ass:append(obj.options.styleAssTag)
 
 	if header then
 		ass:append(header .. "\\N")
@@ -77,7 +77,7 @@ function osd_list.show(obj, list, header, wrap)
 	local offset = 1
 	local visibleIndicesLen = 1
 	while
-		visibleIndicesLen < obj.settings.showAmount
+		visibleIndicesLen < obj.options.showAmount
 		and visibleIndicesLen < listLen
 	do
 		-- Add entry for offset steps below the cursor.
@@ -91,7 +91,7 @@ function osd_list.show(obj, list, header, wrap)
 		local above = obj.cursor - offset
 		if
 			above >= 1
-			and visibleIndicesLen < obj.settings.showAmount
+			and visibleIndicesLen < obj.options.showAmount
 			and visibleIndicesLen < listLen
 		then
 			table.insert(visibleIndices, 1, above)
@@ -103,11 +103,11 @@ function osd_list.show(obj, list, header, wrap)
 
 	for displayIndex, listIndex in ipairs(visibleIndices) do
 		if displayIndex == 1 and listIndex ~= 1 then
-			ass:append(obj.settings.listSlicedPrefix .. "\\N")
+			ass:append(obj.options.listSlicedPrefix .. "\\N")
 		elseif
-			displayIndex == obj.settings.showAmount and listIndex ~= listLen
+			displayIndex == obj.options.showAmount and listIndex ~= listLen
 		then
-			ass:append(obj.settings.listSlicedSuffix)
+			ass:append(obj.options.listSlicedSuffix)
 		else
 			ass:append(
 				(wrap and wrap(displayIndex, listIndex) or list[listIndex])
@@ -116,7 +116,7 @@ function osd_list.show(obj, list, header, wrap)
 		end
 	end
 
-	if obj.settings.scaleByWindow then
+	if obj.options.scaleByWindow then
 		w, h = 0, 0
 	end
 	mp.set_osd_ass(w, h, ass.text)

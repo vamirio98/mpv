@@ -100,7 +100,7 @@ end
 
 local function onPgUp()
 	if #files ~= 0 then
-		osdObj.cursor = osdObj.cursor - osdObj.settings.showAmount
+		osdObj.cursor = osdObj.cursor - osdObj.options.showAmount
 		if osdObj.cursor < 1 then
 			osdObj.cursor = 1
 		end
@@ -111,7 +111,7 @@ end
 
 local function onPgDn()
 	if #files ~= 0 then
-		osdObj.cursor = osdObj.cursor + osdObj.settings.showAmount
+		osdObj.cursor = osdObj.cursor + osdObj.options.showAmount
 		if osdObj.cursor > #files then
 			osdObj.cursor = #files
 		end
@@ -227,7 +227,7 @@ local function main()
 	show = doShow
 	hide = doHide
 
-	osdObj.settings.styleAssTag =
+	osdObj.options.styleAssTag =
 		"{\\rDefault\\an7\\fnIosevka\\fs12\\b0\\blur0\\bord1\\1c&H996F9A\\3c\\H000000\\q2}"
 
 	kb.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
