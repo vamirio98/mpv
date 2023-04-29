@@ -13,10 +13,10 @@ local options = {
 	keyQuit = "ESC",
 
 	-- Entry templates.
-	dircetory = "{\\c&HFFFF00&}[d] ",
-	file = "{\\c&HFFFFFF&}[f] ",
-	hoveringDir = "{\\c&H33FFFF&}[d] ",
-	hoveringFile = "{\\c&H33FFFF&}[f] ",
+	dircetory = "{\\b0\\fs12\\c&HFFFF00&}[d] %entry",
+	file = "{\\b0\\fs12\\c&HFFFFFF&}[f] %entry",
+	hoveringDir = "{\\b0\\fs12\\c&H33FFFF&}[d] %entry",
+	hoveringFile = "{\\b0\\fs12\\c&H33FFFF&}[f] %entry",
 }
 
 local mp = require("mp")
@@ -28,15 +28,12 @@ package.path = package.path
 	.. mp.command_native({ "expand-path", "~~/scripts" })
 	.. "/?.lua"
 
+local OsdList = require("osd_list")
 local kb = require("kb")
-local osdList = require("osd_list")
 
 local path = nil -- Current directory path.
 local files = {} -- All files and subdirectories in current directory.
-local osdObj = osdList.new()
-local visible = false -- If the directory list visible or not.
-local show = nil
-local hide = nil
+local osd = OsdList:new()
 
 local function sort(a, b)
 	local x = utils.file_info(utils.join_path(path, a))
@@ -74,7 +71,7 @@ local function onEnter()
 	if #files == 0 then
 		return
 	end
-	local fullPath = utils.join_path(path, files[osdObj.cursor])
+	local fullPath = utils.join_path(path, files[osd.cursor])
 	if utils.file_info(fullPath).is_dir then
 		VdirOpen(fullPath)
 	else
@@ -82,91 +79,14 @@ local function onEnter()
 	end
 end
 
-local function onUp()
-	if #files ~= 0 and osdObj.cursor > 1 then
-		osdObj.cursor = osdObj.cursor - 1
-	end
-
-	show()
-end
-
-local function onDown()
-	if #files ~= 0 and osdObj.cursor < #files then
-		osdObj.cursor = osdObj.cursor + 1
-	end
-
-	show()
-end
-
-local function onPgUp()
-	if #files ~= 0 then
-		osdObj.cursor = osdObj.cursor - osdObj.options.showAmount
-		if osdObj.cursor < 1 then
-			osdObj.cursor = 1
-		end
-	end
-
-	show()
-end
-
-local function onPgDn()
-	if #files ~= 0 then
-		osdObj.cursor = osdObj.cursor + osdObj.options.showAmount
-		if osdObj.cursor > #files then
-			osdObj.cursor = #files
-		end
-	end
-
-	show()
-end
-
-local function onBegin()
-	if #files ~= 0 then
-		osdObj.cursor = 1
-	end
-
-	show()
-end
-
-local function onEnd()
-	if #files ~= 0 then
-		osdObj.cursor = #files
-	end
-
-	show()
-end
-
-local function onQuit()
-	hide()
-end
-
 local function addKeyBinds()
-	kb.bindKeysForced(
-		options.keyParentDir,
-		"parent-dir",
-		onParentDir,
-		"repeatable"
-	)
-	kb.bindKeysForced(options.keyEnter, "enter", onEnter, "repeatable")
-	kb.bindKeysForced(options.keyUp, "up", onUp, "repeatable")
-	kb.bindKeysForced(options.keyDown, "down", onDown, "repeatable")
-	kb.bindKeysForced(options.keyPgUp, "page-up", onPgUp, "repeatable")
-	kb.bindKeysForced(options.keyPgDn, "page-down", onPgDn, "repeatable")
-	kb.bindKeysForced(options.keyBegin, "begin", onBegin, "repeatable")
-	kb.bindKeysForced(options.keyEnd, "end", onEnd, "repeatable")
-	kb.bindKeysForced(options.keyQuit, "quit", onQuit)
+	kb.bindKeysForced(options.keyParentDir, "parent-dir", onParentDir)
+	kb.bindKeysForced(options.keyEnter, "enter", onEnter)
 end
 
 local function removeKeyBinds()
 	kb.unbindKeys(options.keyParentDir, "parent-dir")
 	kb.unbindKeys(options.keyEnter, "enter")
-	kb.unbindKeys(options.keyUp, "up")
-	kb.unbindKeys(options.keyDown, "down")
-	kb.unbindKeys(options.keyPgUp, "page-up")
-	kb.unbindKeys(options.keyPgDn, "page-down")
-	kb.unbindKeys(options.keyBegin, "begin")
-	kb.unbindKeys(options.keyEnd, "end")
-	kb.unbindKeys(options.keyQuit, "quit")
 end
 
 function VdirOpen(absPath)
@@ -174,15 +94,15 @@ function VdirOpen(absPath)
 	files = utils.readdir(path)
 	table.sort(files, sort)
 
-	osdObj.cursor = #files == 0 and 0 or 1 -- Reset.
+	--osd.cursor = #files == 0 and 0 or 1 -- Reset.
+	osd.title = path
+	osd.content = files
 
-	if visible then -- Hide previous list but do NOT remove key binds.
-		osdList.hide()
-	else
+	if not osd.visible then
 		-- This key will be used to move to parent directory.
 		kb.unbindKeys("-", "vidr-open-dir")
 	end
-	show()
+	osd:show()
 end
 
 local function onVdirOpenDir()
@@ -196,46 +116,42 @@ local function onVdirOpenDir()
 	VdirOpen(dir)
 end
 
-local function wrapEntry(_, index)
-	local fullPath = utils.join_path(path, files[index])
+local function selectTemplate(o, pos)
+	local fullPath = utils.join_path(path, o.content[pos])
 	local template = nil
 	if utils.file_info(fullPath).is_dir then
-		template = index == osdObj.cursor and options.hoveringDir
-			or options.dircetory
+		msg.info(pos)
+		template = pos == o.cursor and options.hoveringDir or options.dircetory
 	else
-		template = index == osdObj.cursor and options.hoveringFile
-			or options.file
+		template = pos == o.cursor and options.hoveringFile or options.file
 	end
-	return template .. files[index]
+	return template
 end
 
-local function doShow()
-	local list = { "Empty" }
-	if #files ~= 0 then
-		list = files
-	end
-	osdList.show(osdObj, list, path, wrapEntry)
-	if not visible then
+local function beforeShow()
+	if not osd.visible then
 		addKeyBinds()
-		visible = true
 	end
 end
 
-local function doHide()
+local function afterHide()
 	removeKeyBinds()
-	osdList.hide()
-	visible = false
 
 	-- Rebind key to open directory list.
 	kb.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
 end
 
 local function main()
-	show = doShow
-	hide = doHide
+	osd.beforeShow = beforeShow
+	osd.afterHide = afterHide
 
-	osdObj.options.styleAssTag =
-		"{\\rDefault\\an7\\fnIosevka\\fs12\\b0\\blur0\\bord1\\1c&H996F9A\\3c\\H000000\\q2}"
+	osd.name = "vdir"
+	osd.title = path
+	osd.wrap = selectTemplate
+
+	osd.options.assTag = osd.options.assTag:gsub("}", "\\fnIosevka}")
+
+	osd.options.resetCursorOnOpen = true
 
 	kb.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
 end
