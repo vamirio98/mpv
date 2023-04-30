@@ -126,9 +126,17 @@ local kb = require("kb")
 --     %entry: the current entry
 local function format(s, o, pos)
 	local len = tostring(#o.content):len()
-	return s:gsub("%%pos", string.format("%0" .. len .. "d", pos))
-		:gsub("%%len", #o.content)
-		:gsub("%%entry", o.content[pos])
+	local res = s
+	if s:find("%%pos") ~= nil then
+		res = res:gsub("%%pos", string.format("%0" .. len .. "d", pos))
+	end
+	if s:find("%len") ~= nil then
+		res = res:gsub("%%len", #o.content)
+	end
+	if s:find("%entry") ~= nil then
+		res = res:gsub("%%entry", o.content[pos])
+	end
+	return res
 end
 
 -- Check if the OsdList object's first and last menber is out of border.
@@ -428,6 +436,20 @@ end
 function OsdList:addHelpMsg(message)
 	for _, v in ipairs(message) do
 		table.insert(self.options.helpMsg, v)
+	end
+end
+
+-- Notify OsdList that its content has changed, let it re-calculate the show
+-- range.
+-- NOTE: this function will try to keep the cursor on the original line.
+function OsdList:contentChanged()
+	checkLowerBound(self)
+	if self.cursor > self.last then
+		self.cursor = self.last
+	end
+	if self.first > self.last then
+		self.first = self.last - self.options.showAmount
+		checkUpperBound(self)
 	end
 end
 

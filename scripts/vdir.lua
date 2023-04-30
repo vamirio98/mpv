@@ -15,8 +15,10 @@ local options = {
 	-- Entry templates.
 	dircetory = "{\\b0\\fs12\\c&HFFFF00&}[d] %entry",
 	file = "{\\b0\\fs12\\c&HFFFFFF&}[f] %entry",
+	unknown = "{\\b0\\fs12\\c&H808080&}[u] %entry",
 	hoveringDir = "{\\b0\\fs12\\c&H33FFFF&}[d] %entry",
 	hoveringFile = "{\\b0\\fs12\\c&H33FFFF&}[f] %entry",
+	hoveringUnknown = "{\\b0\\fs12\\c&H33FFFF&}[u] %entry",
 }
 
 local mp = require("mp")
@@ -32,12 +34,19 @@ local OsdList = require("osd_list")
 local kb = require("kb")
 
 local path = nil -- Current directory path.
-local files = {} -- All files and subdirectories in current directory.
 local osd = OsdList:new()
 
 local function sort(a, b)
 	local x = utils.file_info(utils.join_path(path, a))
 	local y = utils.file_info(utils.join_path(path, b))
+
+	-- Put unknown items last.
+	if not x then
+		return false
+	end
+	if not y then
+		return true
+	end
 
 	local res = true
 	if (x.is_dir and y.is_dir) or (x.is_file and y.is_file) then
@@ -49,30 +58,18 @@ local function sort(a, b)
 end
 
 local function onParentDir()
-	if #files == 0 then
-		return
-	end
-
-	local tmp = utils.split_path(path)
-	-- Remove the last path separator.
-	if
-		#tmp > 1
-		and (
-			string.sub(tmp, #tmp, #tmp) == "\\"
-			or string.sub(tmp, #tmp, #tmp) == "/"
-		)
-	then
-		tmp = string.sub(tmp, 1, #tmp - 1)
-	end
-	VdirOpen(tmp)
+	VdirOpen(utils.split_path(path))
 end
 
 local function onEnter()
-	if #files == 0 then
+	local fullPath = utils.join_path(path, osd.content[osd.cursor])
+	local info = utils.file_info(fullPath)
+	if not info then
+		msg.error("Can not read file " .. fullPath)
 		return
 	end
-	local fullPath = utils.join_path(path, files[osd.cursor])
-	if utils.file_info(fullPath).is_dir then
+
+	if info.is_dir then
 		VdirOpen(fullPath)
 	else
 		mp.commandv("loadfile", fullPath, "replace")
@@ -90,18 +87,40 @@ local function removeKeyBinds()
 end
 
 function VdirOpen(absPath)
-	path = absPath:gsub("\\", "/") -- Use "/" as the path separator uniformly.
-	files = utils.readdir(path)
-	table.sort(files, sort)
+	-- Force OsdList to re-calculate the show range and reset cursor.
+	osd:hide()
 
-	--osd.cursor = #files == 0 and 0 or 1 -- Reset.
-	osd.title = path
-	osd.content = files
+	local tmp = absPath:gsub("\\", "/") -- Use "/" as the path separator uniformly.
 
-	if not osd.visible then
-		-- This key will be used to move to parent directory.
-		kb.unbindKeys("-", "vidr-open-dir")
+	-- utils.readdir() will read the part after the last separator.
+	-- e.g. a/b/c -> read c; a/b/c/ -> read nothing.
+	-- Remove the last path separator.
+	if
+		(
+			(#tmp > 3 and string.sub(tmp, 2, 2) == ":") -- For Windows.
+			or #tmp > 1 -- For Linux.
+		) and string.sub(tmp, #tmp, #tmp) == "/"
+	then
+		tmp = string.sub(tmp, 1, #tmp - 1)
 	end
+
+	-- utils.readdir() can't read C: but can C:/ , really strange.
+	if #tmp == 2 and string.sub(tmp, 2, 2) == ":" then
+		tmp = tmp .. "/"
+	end
+
+	path = tmp
+	osd.content = utils.readdir(path)
+
+	if not osd.content then
+		msg.error("Can not read file " .. path)
+		return
+	end
+
+	table.sort(osd.content, sort)
+
+	osd.title = path
+
 	osd:show()
 end
 
@@ -111,7 +130,6 @@ local function onVdirOpenDir()
 		dir = utils.getcwd()
 	else
 		dir = utils.split_path(mp.get_property("path"))
-		dir = dir:sub(1, #dir - 1)
 	end
 	VdirOpen(dir)
 end
@@ -119,17 +137,24 @@ end
 local function selectTemplate(o, pos)
 	local fullPath = utils.join_path(path, o.content[pos])
 	local template = nil
-	if utils.file_info(fullPath).is_dir then
-		msg.info(pos)
+	local info = utils.file_info(fullPath)
+
+	if not info then
+		template = pos == o.cursor and options.hoveringUnknown
+			or options.unknown
+	elseif info.is_dir then
 		template = pos == o.cursor and options.hoveringDir or options.dircetory
 	else
 		template = pos == o.cursor and options.hoveringFile or options.file
 	end
+
 	return template
 end
 
 local function beforeShow()
 	if not osd.visible then
+		-- This key will be used to move to parent directory.
+		kb.unbindKeys("-", "vidr-open-dir")
 		addKeyBinds()
 	end
 end

@@ -231,6 +231,7 @@ local function main()
 	osd.resetCursorOnOpen = true
 	osd.resetSelectedOnOpen = true
 
+	osd.options.showAmount = 10
 	osd.options.assTag = osd.options.assTag:gsub("}", "\\fnIosevka}")
 
 	readHistory()
