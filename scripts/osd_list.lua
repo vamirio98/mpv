@@ -73,8 +73,6 @@ local OsdList = {
 	-- pos: the position of current entry, 1-based
 	wrap = nil,
 
-	firstShow = true, -- Whether to show for the first time.
-
 	visible = false, -- Whether the list is visible.
 
 	-- Whether to reset cursor to the first entry when opening the list.
@@ -133,11 +131,14 @@ local function format(s, o, pos)
 		:gsub("%%entry", o.content[pos])
 end
 
--- Check if the OsdList object's first and last menber is out of border
-local function checkBorder(o)
+-- Check if the OsdList object's first and last menber is out of border.
+local function checkUpperBound(o)
 	if o.first < 1 then
 		o.first = 1
 	end
+end
+
+local function checkLowerBound(o)
 	if o.last > #o.content then
 		o.last = #o.content
 	end
@@ -150,8 +151,9 @@ function OsdList:onUp()
 
 	if self.cursor == self.first then
 		self.first = self.first - 1
+		checkUpperBound(self)
 		self.last = self.first + self.options.showAmount - 1
-		checkBorder(self)
+		checkLowerBound(self)
 	end
 
 	self.cursor = self.cursor - 1
@@ -164,8 +166,9 @@ function OsdList:onDown()
 
 	if self.cursor == self.last then
 		self.last = self.last + 1
+		checkLowerBound(self)
 		self.first = self.last - self.options.showAmount + 1
-		checkBorder(self)
+		checkUpperBound(self)
 	end
 
 	self.cursor = self.cursor + 1
@@ -182,7 +185,10 @@ function OsdList:onPgUp()
 		self.cursor = self.first + 1
 		self.last = self.cursor
 		self.first = self.last - self.options.showAmount + 1
-		checkBorder(self)
+		checkUpperBound(self)
+		-- Try to show as many entries as posible.
+		self.last = self.first + self.options.showAmount - 1
+		checkLowerBound(self)
 	end
 end
 
@@ -197,7 +203,7 @@ function OsdList:onPgDn()
 		self.cursor = self.last - 1
 		self.first = self.cursor
 		self.last = self.first + self.options.showAmount - 1
-		checkBorder(self)
+		checkLowerBound(self)
 	end
 end
 
@@ -210,7 +216,7 @@ function OsdList:onBegin()
 	if self.first ~= 1 then
 		self.first = 1
 		self.last = self.options.showAmount
-		checkBorder(self)
+		checkLowerBound(self)
 	end
 end
 
@@ -223,7 +229,7 @@ function OsdList:onEnd()
 	if self.last ~= #self.content then
 		self.last = #self.content
 		self.first = self.last - self.options.showAmount + 1
-		checkBorder(self)
+		checkUpperBound(self)
 	end
 end
 
@@ -298,6 +304,7 @@ local function addKeyBinds(o)
 
 	kb.bindKeysForced(o.options.keyHelp, o.name .. "-help", function()
 		o:hide()
+		o.visible = true -- Ensure that do NOT reset cursor.
 		removeKeyBinds(o)
 
 		local help = OsdList:new()
@@ -348,20 +355,18 @@ function OsdList:show()
 
 	ass:append(self.options.assTag)
 
-	if self.firstShow then
+	if not self.visible then
 		-- If the cursor position is assign by caller, do NOT change it.
-		if self.cursor == 0 then
+		if self.cursor == 0 or self.resetCursorOnOpen then
 			self.cursor = 1
 		end
-	else
-		if not self.visible then
-			if self.resetCursorOnOpen then
-				self.cursor = 1
-			end
-			if self.resetSelectedOnOpen then
-				self.selected = {}
-			end
+		if self.resetSelectedOnOpen then
+			self.selected = {}
 		end
+		self.first = self.cursor - math.floor(self.options.showAmount / 2)
+		checkUpperBound(self)
+		self.last = self.first + self.options.showAmount - 1
+		checkLowerBound(self)
 	end
 
 	ass:append(
@@ -370,15 +375,6 @@ function OsdList:show()
 			.. (self.options.helpMsg and " (press ? for help)" or "")
 			.. "\\N"
 	)
-
-	if self.firstShow or self.options.resetCursorOnOpen then
-		self.first = self.cursor - math.floor(self.options.showAmount / 2)
-		if self.first < 1 then
-			self.first = 1
-		end
-		self.last = self.first + self.options.showAmount - 1
-		checkBorder(self)
-	end
 
 	if self.content[1] == "(Empty)" then
 		ass:append(self.options.entryAssTag .. self.content[1])
@@ -401,10 +397,6 @@ function OsdList:show()
 		w, h = 0, 0
 	end
 	mp.set_osd_ass(w, h, ass.text)
-
-	if self.firstShow then
-		self.firstShow = false
-	end
 
 	if not self.visible then
 		addKeyBinds(self)
