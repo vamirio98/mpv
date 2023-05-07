@@ -5,15 +5,6 @@ local _options = {
 	-- The maximum amount of lines list will render.
 	showAmount = 15,
 
-	-- Truncate a long line or not.
-	truncateLongLine = true,
-
-	-- The maximum length of a line.
-	maxLineLen = 80,
-
-	-- What to show when a line is truncated.
-	truncatedSuffix = "@@@",
-
 	-- Ass tags, see https://aegisub.org for more help.
 	assTag = "{\\rDefault\\an7\\b0\\bord0\\blur0\\fs12\\1c&HFFFFFF&\\q2}",
 	titleAssTag = "{\\b1\\fs16\\1c&HB414B8&}",
@@ -24,6 +15,12 @@ local _options = {
 	-- NOTE: this option is now unusable, list always scale by window.
 	scaleByWindow = true,
 
+	-- Whether to reset cursor to the first entry when opening the list.
+	resetCursorOnOpen = false,
+
+	-- Whether to reset selected to empty when opening the list.
+	resetSelectedOnOpen = false,
+
 	-- Keys, separate multiple keys by a space.
 	keyUp = "UP k",
 	keyDown = "DOWN j",
@@ -32,7 +29,6 @@ local _options = {
 	keyBegin = "HOME Ctrl+a",
 	keyEnd = "END Ctrl+e",
 	keySelect = "RIGHT l",
-	keyUnselect = "LEFT h",
 	keyQuit = "ESC",
 	keyHelp = "?",
 
@@ -43,8 +39,7 @@ local _options = {
 		"{\\c&H808080&}PgDn, Ctrl+f: {\\c&HFFFFFF&}move to next page",
 		"{\\c&H808080&}Home, Ctrl+a: {\\c&HFFFFFF&}move to beginning",
 		"{\\c&H808080&}End, Ctrl+e:  {\\c&HFFFFFF&}move to end",
-		"{\\c&H808080&}Right, l:     {\\c&HFFFFFF&}select entry",
-		"{\\c&H808080&}Left, h:      {\\c&HFFFFFF&}unselect entry",
+		"{\\c&H808080&}Right, l:     {\\c&HFFFFFF&}select/unselect entry",
 		"{\\c&H808080&}Esc:          {\\c&HFFFFFF&}close the list",
 		"{\\c&H808080&}?:            {\\c&HFFFFFF&}show help",
 	},
@@ -67,19 +62,13 @@ local OsdList = {
 
 	name = "",
 	title = "",
-	content = nil,
+	content = {},
 	-- Function used to wrap the entry, it accepts TWO arguments:
 	-- o: the OsdList object
 	-- pos: the position of current entry, 1-based
 	wrap = nil,
 
 	visible = false, -- Whether the list is visible.
-
-	-- Whether to reset cursor to the first entry when opening the list.
-	resetCursorOnOpen = false,
-
-	-- Whether to reset selected to empty when opening the list.
-	resetSelectedOnOpen = false,
 
 	options = _options,
 }
@@ -101,6 +90,18 @@ end
 
 function OsdList:selectedContains(key)
 	return self.selected[key] ~= nil
+end
+
+-- Get selected entrys' 1-based position, the result is a ordered array.
+function OsdList:getSelected()
+	local res = {}
+
+	for k, _ in pairs(self.selected) do
+		table.insert(res, k)
+	end
+	table.sort(res)
+
+	return res
 end
 
 local math = require("math")
@@ -241,12 +242,13 @@ function OsdList:onEnd()
 	end
 end
 
+-- Toggle select.
 function OsdList:onSelect()
-	self:addToSelected(self.cursor)
-end
-
-function OsdList:onUnselect()
-	self:removeFromSelected(self.cursor)
+	if not self:selectedContains(self.cursor) then
+		self:addToSelected(self.cursor)
+	else
+		self:removeFromSelected(self.cursor)
+	end
 end
 
 -- Remove all key binds.
@@ -258,7 +260,6 @@ local function removeKeyBinds(o)
 	kb.unbindKeys(o.options.keyBegin, o.name .. "-begin")
 	kb.unbindKeys(o.options.keyEnd, o.name .. "-end")
 	kb.unbindKeys(o.options.keySelect, o.name .. "-select")
-	kb.unbindKeys(o.options.keyUnselect, o.name .. "-unselect")
 	kb.unbindKeys(o.options.keyQuit, o.name .. "-quit")
 	kb.unbindKeys(o.options.keyHelp, o.name .. "-help")
 end
@@ -297,11 +298,6 @@ local function addKeyBinds(o)
 
 	kb.bindKeysForced(o.options.keySelect, o.name .. "-select", function()
 		o:onSelect()
-		o:show()
-	end)
-
-	kb.bindKeysForced(o.options.keyUnselect, o.name .. "-unselect", function()
-		o:onUnselect()
 		o:show()
 	end)
 
@@ -351,7 +347,7 @@ function OsdList:show()
 		self.beforeShow()
 	end
 
-	if not self.content or #self.content == 0 then
+	if #self.content == 0 then
 		self.content[1] = "(Empty)"
 	end
 
@@ -365,10 +361,10 @@ function OsdList:show()
 
 	if not self.visible then
 		-- If the cursor position is assign by caller, do NOT change it.
-		if self.cursor == 0 or self.resetCursorOnOpen then
+		if self.cursor == 0 or self.options.resetCursorOnOpen then
 			self.cursor = 1
 		end
-		if self.resetSelectedOnOpen then
+		if self.options.resetSelectedOnOpen then
 			self.selected = {}
 		end
 		self.first = self.cursor - math.floor(self.options.showAmount / 2)
@@ -439,10 +435,9 @@ function OsdList:addHelpMsg(message)
 	end
 end
 
--- Notify OsdList that its content has changed, let it re-calculate the show
--- range.
+-- Recalculate the show range.
 -- NOTE: this function will try to keep the cursor on the original line.
-function OsdList:contentChanged()
+function OsdList:recalculateShowRange()
 	checkLowerBound(self)
 	if self.cursor > self.last then
 		self.cursor = self.last

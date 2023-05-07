@@ -161,9 +161,12 @@ local function onRemove()
 	if osd:selectedContains(osd.cursor) then
 		osd:removeFromSelected(osd.cursor)
 	end
+	-- TODO: there is a strange bug that tmp.selected will contains elements
+	-- in osd.selected since the second time this function is called, even I
+	-- always create it through OsdList:new().
 	local tmp = OsdList:new()
-	for k, _ in pairs(osd.selected) do
-		tmp:addToSelected(k > osd.cursor and (k - 1) or k)
+	for _, v in ipairs(osd:getSelected()) do
+		tmp:addToSelected(v > osd.cursor and (v - 1) or v)
 	end
 	osd.selected = tmp.selected
 
@@ -204,8 +207,19 @@ local function updateList()
 	end
 end
 
+local function setShortcutKey()
+	kb.bindKeysForced("h", "show-history", function()
+		kb.unbindKeys("h", "show-history")
+		osd:show()
+	end)
+end
+
 local function beforeShow()
+	local prevLen = #osd.content
 	updateList()
+	if #osd.content ~= prevLen then
+		osd:recalculateShowRange()
+	end
 
 	if not osd.visible then
 		addKeyBinds()
@@ -214,6 +228,8 @@ end
 
 local function afterHide()
 	removeKeyBinds()
+
+	setShortcutKey()
 end
 
 local function onFileLoaded()
@@ -228,8 +244,8 @@ local function main()
 	osd.title = "History [%pos/%len]"
 	osd.wrap = selectTemplate
 	osd:addHelpMsg(options.helpMsg)
-	osd.resetCursorOnOpen = true
-	osd.resetSelectedOnOpen = true
+	osd.options.resetCursorOnOpen = true
+	osd.options.resetSelectedOnOpen = true
 
 	osd.options.showAmount = 10
 	osd.options.assTag = osd.options.assTag:gsub("}", "\\fnIosevka}")
@@ -239,9 +255,7 @@ local function main()
 	mp.register_event("file-loaded", onFileLoaded)
 	mp.register_event("shutdown", recordHistory)
 
-	kb.bindKeys("h", "show-history", function()
-		osd:show()
-	end)
+	setShortcutKey()
 end
 
 main()
