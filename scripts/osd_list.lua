@@ -308,7 +308,6 @@ local function addKeyBinds(o)
 
 	kb.bindKeysForced(o.options.keyHelp, o.name .. "-help", function()
 		o:hide()
-		o.visible = true -- Ensure that do NOT reset cursor.
 		removeKeyBinds(o)
 
 		local help = OsdList:new()
@@ -336,7 +335,20 @@ local function addKeyBinds(o)
 			kb.unbindKeys(help.options.keyDown, help.name .. "-down")
 			kb.unbindKeys(help.options.keyQuit, help.name .. "-quit")
 
+			addKeyBinds(o)
+
+			-- Record the reset options, then set them to false to avoid to
+			-- reset the object.
+			local resetCursorOnOpen = o.options.resetCursorOnOpen
+			local resetSelectedOnOpen = o.options.resetSelectedOnOpen
+			o.options.resetCursorOnOpen = false
+			o.options.resetSelectedOnOpen = false
+
 			o:show()
+
+			-- Restore the object's reset options.
+			o.options.resetCursorOnOpen = resetCursorOnOpen
+			o.options.resetSelectedOnOpen = resetSelectedOnOpen
 		end)
 	end)
 end
