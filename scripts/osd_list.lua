@@ -460,4 +460,17 @@ function OsdList:recalculateShowRange()
 	end
 end
 
+-- Locate the cursor to the specified entry, return the result if found, and 0
+-- if not.
+function OsdList:locate(entry)
+	local pos = 0
+	for i, v in ipairs(self.content) do
+		if entry == v then
+			pos = i
+		end
+	end
+
+	return pos
+end
+
 return OsdList

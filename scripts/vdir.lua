@@ -86,11 +86,11 @@ local function removeKeyBinds()
 	kb.unbindKeys(options.keyEnter, "enter")
 end
 
-function VdirOpen(absPath)
+function VdirOpen(dir, file)
 	-- Force OsdList to re-calculate the show range and reset cursor.
 	osd:hide()
 
-	local tmp = absPath:gsub("\\", "/") -- Use "/" as the path separator uniformly.
+	local tmp = dir:gsub("\\", "/") -- Use "/" as the path separator uniformly.
 
 	-- utils.readdir() will read the part after the last separator.
 	-- e.g. a/b/c -> read c; a/b/c/ -> read nothing.
@@ -121,17 +121,29 @@ function VdirOpen(absPath)
 
 	osd.title = path
 
+	if file then
+		local pos = osd:locate(file)
+		if pos ~= 0 then
+			osd.cursor = pos
+			-- Avoid the cursor to reset, keep it locating to the file.
+			osd.options.resetCursorOnOpen = false
+		end
+	end
 	osd:show()
+	-- Reset the cursor if open a new directory without specifying file.
+	osd.options.resetCursorOnOpen = true
 end
 
 local function onVdirOpenDir()
 	local dir = nil
+	local file = nil
 	if mp.get_property_native("idle-active") then
 		dir = utils.getcwd()
 	else
 		dir = utils.split_path(mp.get_property("path"))
+		file = mp.get_property("filename")
 	end
-	VdirOpen(dir)
+	VdirOpen(dir, file)
 end
 
 local function selectTemplate(o, pos)
