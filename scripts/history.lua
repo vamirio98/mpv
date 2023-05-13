@@ -15,9 +15,9 @@ local options = {
 	keyPgDn = "PGDWN Ctrl+f",
 	keybegin = "HOME Ctrl+a",
 	keyEnd = "END Ctrl+e",
+	keyIntoDir = "i",
 	keyEnter = "ENTER",
 	keySelect = "RIGHT l",
-	keyUnselect = "LEFT h",
 	keyRemove = "BS Ctrl+d",
 	keyQuit = "ESC",
 	keyHelp = "?",
@@ -138,6 +138,8 @@ end
 --
 -- To show history on screen.
 --
+local utils = require("mp.utils")
+
 package.path = package.path
 	.. ";"
 	.. mp.command_native({ "expand-path", "~~/scripts" })
@@ -145,8 +147,18 @@ package.path = package.path
 
 local OsdList = require("osd_list")
 local kb = require("kb")
+local vdir = require("vdir")
 
 local osd = OsdList:new()
+
+local function onIntoDir()
+	local pos = osd.cursor
+	local dir = utils.split_path(history[pos].path)
+
+	osd:hide()
+
+	VdirOpen(dir, history[pos].title)
+end
 
 local function onEnter()
 	mp.commandv("loadfile", history[osd.cursor].path, "replace")
@@ -174,11 +186,13 @@ local function onRemove()
 end
 
 local function addKeyBinds()
+	kb.bindKeysForced(options.keyIntoDir, "into-dir", onIntoDir)
 	kb.bindKeysForced(options.keyEnter, "play-entry", onEnter)
 	kb.bindKeysForced(options.keyRemove, "remove-entry", onRemove)
 end
 
 local function removeKeyBinds()
+	kb.unbindKeys(options.keyIntoDir, "into-dir")
 	kb.unbindKeys(options.keyEnter, "play-entry")
 	kb.unbindKeys(options.keyRemove, "remove-entry")
 end
@@ -248,7 +262,7 @@ local function main()
 	osd.options.resetSelectedOnOpen = true
 
 	osd.options.showAmount = 10
-	osd.options.assTag = osd.options.assTag:gsub("}", "\\fnIosevka}")
+	osd.options.assTag = osd.options.assTag:gsub("}", "\\fnIosevka NFM}")
 
 	readHistory()
 

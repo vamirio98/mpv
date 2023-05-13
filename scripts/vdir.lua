@@ -186,7 +186,7 @@ local function main()
 	osd.title = path
 	osd.wrap = selectTemplate
 
-	osd.options.assTag = osd.options.assTag:gsub("}", "\\fnIosevka}")
+	osd.options.assTag = osd.options.assTag:gsub("}", "\\fnIosevka NFM}")
 
 	osd.options.resetCursorOnOpen = true
 
