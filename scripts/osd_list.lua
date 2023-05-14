@@ -115,7 +115,7 @@ package.path = package.path
 	.. mp.command_native({ "expand-path", "~~/scripts" })
 	.. "/?.lua"
 
-local kb = require("kb")
+local tools = require("tools")
 
 -- Format string.
 -- @o: the OsdList object
@@ -253,103 +253,111 @@ end
 
 -- Remove all key binds.
 local function removeKeyBinds(o)
-	kb.unbindKeys(o.options.keyUp, o.name .. "-up")
-	kb.unbindKeys(o.options.keyDown, o.name .. "-down")
-	kb.unbindKeys(o.options.keyPgUp, o.name .. "-pgup")
-	kb.unbindKeys(o.options.keyPgDn, o.name .. "-pgdn")
-	kb.unbindKeys(o.options.keyBegin, o.name .. "-begin")
-	kb.unbindKeys(o.options.keyEnd, o.name .. "-end")
-	kb.unbindKeys(o.options.keySelect, o.name .. "-select")
-	kb.unbindKeys(o.options.keyQuit, o.name .. "-quit")
-	kb.unbindKeys(o.options.keyHelp, o.name .. "-help")
+	tools.unbindKeys(o.options.keyUp, o.name .. "-up")
+	tools.unbindKeys(o.options.keyDown, o.name .. "-down")
+	tools.unbindKeys(o.options.keyPgUp, o.name .. "-pgup")
+	tools.unbindKeys(o.options.keyPgDn, o.name .. "-pgdn")
+	tools.unbindKeys(o.options.keyBegin, o.name .. "-begin")
+	tools.unbindKeys(o.options.keyEnd, o.name .. "-end")
+	tools.unbindKeys(o.options.keySelect, o.name .. "-select")
+	tools.unbindKeys(o.options.keyQuit, o.name .. "-quit")
+	tools.unbindKeys(o.options.keyHelp, o.name .. "-help")
 end
 
 -- Add all key binds.
 local function addKeyBinds(o)
-	kb.bindKeysForced(o.options.keyUp, o.name .. "-up", function()
+	tools.bindKeysForced(o.options.keyUp, o.name .. "-up", function()
 		o:onUp()
 		o:show()
 	end, "repeatable")
 
-	kb.bindKeysForced(o.options.keyDown, o.name .. "-down", function()
+	tools.bindKeysForced(o.options.keyDown, o.name .. "-down", function()
 		o:onDown()
 		o:show()
 	end, "repeatable")
 
-	kb.bindKeysForced(o.options.keyPgUp, o.name .. "-pgup", function()
+	tools.bindKeysForced(o.options.keyPgUp, o.name .. "-pgup", function()
 		o:onPgUp()
 		o:show()
 	end, "repeatable")
 
-	kb.bindKeysForced(o.options.keyPgDn, o.name .. "-pgdn", function()
+	tools.bindKeysForced(o.options.keyPgDn, o.name .. "-pgdn", function()
 		o:onPgDn()
 		o:show()
 	end, "repeatable")
 
-	kb.bindKeysForced(o.options.keyBegin, o.name .. "-begin", function()
+	tools.bindKeysForced(o.options.keyBegin, o.name .. "-begin", function()
 		o:onBegin()
 		o:show()
 	end)
 
-	kb.bindKeysForced(o.options.keyEnd, o.name .. "-end", function()
+	tools.bindKeysForced(o.options.keyEnd, o.name .. "-end", function()
 		o:onEnd()
 		o:show()
 	end)
 
-	kb.bindKeysForced(o.options.keySelect, o.name .. "-select", function()
+	tools.bindKeysForced(o.options.keySelect, o.name .. "-select", function()
 		o:onSelect()
 		o:show()
 	end)
 
-	kb.bindKeysForced(o.options.keyQuit, o.name .. "-quit", function()
+	tools.bindKeysForced(o.options.keyQuit, o.name .. "-quit", function()
 		o:hide()
 		removeKeyBinds(o)
 	end)
 
-	kb.bindKeysForced(o.options.keyHelp, o.name .. "-help", function()
+	tools.bindKeysForced(o.options.keyHelp, o.name .. "-help", function()
 		o:hide()
 		removeKeyBinds(o)
 
 		local help = OsdList:new()
 		help.name = o.name .. "-help"
 		help.title = "Help (press j, k to navigate and <ESC> to quit)"
-		help.content = o.options.helpMsg
+		help.content = tools.clone(o.options.helpMsg)
 		help.options.helpMsg = nil
 
 		help:show()
 
-		kb.bindKeysForced(help.options.keyUp, help.name .. "-up", function()
+		tools.bindKeysForced(help.options.keyUp, help.name .. "-up", function()
 			help:onPgUp()
 			help:show()
 		end)
 
-		kb.bindKeysForced(help.options.keyDown, help.name .. "-down", function()
-			help:onPgDn()
-			help:show()
-		end)
+		tools.bindKeysForced(
+			help.options.keyDown,
+			help.name .. "-down",
+			function()
+				help:onPgDn()
+				help:show()
+			end
+		)
 
-		kb.bindKeysForced(help.options.keyQuit, help.name .. "-quit", function()
-			help:hide()
+		tools.bindKeysForced(
+			help.options.keyQuit,
+			help.name .. "-quit",
+			function()
+				help:hide()
 
-			kb.unbindKeys(help.options.keyUp, help.name .. "-up")
-			kb.unbindKeys(help.options.keyDown, help.name .. "-down")
-			kb.unbindKeys(help.options.keyQuit, help.name .. "-quit")
+				tools.unbindKeys(help.options.keyUp, help.name .. "-up")
+				tools.unbindKeys(help.options.keyDown, help.name .. "-down")
+				tools.unbindKeys(help.options.keyQuit, help.name .. "-quit")
 
-			addKeyBinds(o)
+				addKeyBinds(o)
 
-			-- Record the reset options, then set them to false to avoid to
-			-- reset the object.
-			local resetCursorOnOpen = o.options.resetCursorOnOpen
-			local resetSelectedOnOpen = o.options.resetSelectedOnOpen
-			o.options.resetCursorOnOpen = false
-			o.options.resetSelectedOnOpen = false
+				-- Record the reset options, then set them to false to avoid to
+				-- reset the object.
+				local resetCursorOnOpen = o.options.resetCursorOnOpen
+				local resetSelectedOnOpen = o.options.resetSelectedOnOpen
+				o.options.resetCursorOnOpen = false
+				o.options.resetSelectedOnOpen = false
 
-			o:show()
+				o:show()
 
-			-- Restore the object's reset options.
-			o.options.resetCursorOnOpen = resetCursorOnOpen
-			o.options.resetSelectedOnOpen = resetSelectedOnOpen
-		end)
+				-- Restore the object's reset options.
+				o.options.resetCursorOnOpen = resetCursorOnOpen
+				o.options.resetSelectedOnOpen = resetSelectedOnOpen
+			end
+		)
 	end)
 end
 

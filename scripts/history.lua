@@ -146,7 +146,7 @@ package.path = package.path
 	.. "/?.lua"
 
 local OsdList = require("osd_list")
-local kb = require("kb")
+local tools = require("tools")
 local vdir = require("vdir")
 
 local osd = OsdList:new()
@@ -180,21 +180,21 @@ local function onRemove()
 	for _, v in ipairs(osd:getSelected()) do
 		tmp:addToSelected(v > osd.cursor and (v - 1) or v)
 	end
-	osd.selected = tmp.selected
+	osd.selected = tools.clone(tmp.selected)
 
 	osd:show()
 end
 
 local function addKeyBinds()
-	kb.bindKeysForced(options.keyIntoDir, "into-dir", onIntoDir)
-	kb.bindKeysForced(options.keyEnter, "play-entry", onEnter)
-	kb.bindKeysForced(options.keyRemove, "remove-entry", onRemove)
+	tools.bindKeysForced(options.keyIntoDir, "into-dir", onIntoDir)
+	tools.bindKeysForced(options.keyEnter, "play-entry", onEnter)
+	tools.bindKeysForced(options.keyRemove, "remove-entry", onRemove)
 end
 
 local function removeKeyBinds()
-	kb.unbindKeys(options.keyIntoDir, "into-dir")
-	kb.unbindKeys(options.keyEnter, "play-entry")
-	kb.unbindKeys(options.keyRemove, "remove-entry")
+	tools.unbindKeys(options.keyIntoDir, "into-dir")
+	tools.unbindKeys(options.keyEnter, "play-entry")
+	tools.unbindKeys(options.keyRemove, "remove-entry")
 end
 
 -- Select a template according to the list index.
@@ -222,8 +222,8 @@ local function updateList()
 end
 
 local function setShortcutKey()
-	kb.bindKeysForced("h", "show-history", function()
-		kb.unbindKeys("h", "show-history")
+	tools.bindKeysForced("h", "show-history", function()
+		tools.unbindKeys("h", "show-history")
 		osd:show()
 	end)
 end

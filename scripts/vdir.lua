@@ -31,7 +31,7 @@ package.path = package.path
 	.. "/?.lua"
 
 local OsdList = require("osd_list")
-local kb = require("kb")
+local tools = require("tools")
 
 local path = nil -- Current directory path.
 local osd = OsdList:new()
@@ -77,13 +77,13 @@ local function onEnter()
 end
 
 local function addKeyBinds()
-	kb.bindKeysForced(options.keyParentDir, "parent-dir", onParentDir)
-	kb.bindKeysForced(options.keyEnter, "enter", onEnter)
+	tools.bindKeysForced(options.keyParentDir, "parent-dir", onParentDir)
+	tools.bindKeysForced(options.keyEnter, "enter", onEnter)
 end
 
 local function removeKeyBinds()
-	kb.unbindKeys(options.keyParentDir, "parent-dir")
-	kb.unbindKeys(options.keyEnter, "enter")
+	tools.unbindKeys(options.keyParentDir, "parent-dir")
+	tools.unbindKeys(options.keyEnter, "enter")
 end
 
 function VdirOpen(dir, file)
@@ -166,7 +166,7 @@ end
 local function beforeShow()
 	if not osd.visible then
 		-- This key will be used to move to parent directory.
-		kb.unbindKeys("-", "vidr-open-dir")
+		tools.unbindKeys("-", "vidr-open-dir")
 		addKeyBinds()
 	end
 end
@@ -175,7 +175,7 @@ local function afterHide()
 	removeKeyBinds()
 
 	-- Rebind key to open directory list.
-	kb.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
+	tools.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
 end
 
 local function main()
@@ -190,7 +190,7 @@ local function main()
 
 	osd.options.resetCursorOnOpen = true
 
-	kb.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
+	tools.bindKeysForced("-", "vdir-open-dir", onVdirOpenDir)
 end
 
 main()
