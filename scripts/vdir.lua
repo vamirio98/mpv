@@ -73,6 +73,7 @@ local function onEnter()
 		VdirOpen(fullPath)
 	else
 		mp.commandv("loadfile", fullPath, "replace")
+		osd:hide()
 	end
 end
 
